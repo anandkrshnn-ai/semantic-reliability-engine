@@ -178,7 +178,14 @@ def test_baseline_agent_evaluator():
     assert report.total_evaluations == 2
     assert report.execution_success_rate_pct == 100.0
     assert report.contract_compliance_rate_pct == 50.0
+    assert report.confusion_matrix.compliant_match == 1
+    assert report.confusion_matrix.violation_mismatch == 1
+    assert report.latency.mean_ms >= 0.0
+    assert report.latency.p95_ms >= 0.0
+
     md = report.summary_markdown()
     assert "Agent Semantic Compliance Benchmark" in md
+    assert "No external benchmark comparison is claimed" in md
+    assert "2x2 Semantic Compliance & Result Confusion Matrix" in md
 
 

@@ -1,12 +1,25 @@
 import time
-from typing import Dict, List, Any, Optional
+import uuid
+import numpy as np
+from enum import Enum
+from typing import Dict, List, Any, Optional, Tuple
 from pydantic import BaseModel, Field
 import duckdb
 import pandas as pd
 
 from semantic_reliability.compiler.schema import MetricDefinition
 from semantic_reliability.firewall.engine import SemanticEvaluator, ContractRegistry
+from semantic_reliability.firewall.policy import PolicyEngine
 from semantic_reliability.firewall.models import EvaluateRequest, Decision
+
+
+class EvalClassification(str, Enum):
+    CONTRACT_COMPLIANT_RESULT_MATCH = "CONTRACT_COMPLIANT_RESULT_MATCH"
+    CONTRACT_COMPLIANT_RESULT_MISMATCH = "CONTRACT_COMPLIANT_RESULT_MISMATCH"
+    CONTRACT_VIOLATION_RESULT_MATCH = "CONTRACT_VIOLATION_RESULT_MATCH"
+    CONTRACT_VIOLATION_RESULT_MISMATCH = "CONTRACT_VIOLATION_RESULT_MISMATCH"
+    UNRESOLVED_CONTRACT = "UNRESOLVED_CONTRACT"
+    EXECUTION_ERROR = "EXECUTION_ERROR"
 
 
 class AgentEvalRecord(BaseModel):
@@ -15,12 +28,30 @@ class AgentEvalRecord(BaseModel):
     domain: str
     prompt: str
     generated_sql: str
+    classification: EvalClassification
     execution_success: bool
     contract_compliant: bool
+    result_correct: bool
     firewall_decision: str
     violations: List[str] = Field(default_factory=list)
-    result_correct: bool = False
     latency_ms: float = 0.0
+
+
+class ConfusionMatrix(BaseModel):
+    compliant_match: int = 0
+    compliant_mismatch: int = 0
+    violation_match: int = 0
+    violation_mismatch: int = 0
+    unresolved: int = 0
+    execution_error: int = 0
+
+
+class LatencySummary(BaseModel):
+    mean_ms: float = 0.0
+    p50_ms: float = 0.0
+    p95_ms: float = 0.0
+    p99_ms: float = 0.0
+    environment: str = "Local DuckDB evaluation runner (in-memory)"
 
 
 class AgentBenchmarkReport(BaseModel):
@@ -30,25 +61,42 @@ class AgentBenchmarkReport(BaseModel):
     execution_success_count: int = 0
     contract_compliant_count: int = 0
     result_correct_count: int = 0
-    avg_latency_ms: float = 0.0
     execution_success_rate_pct: float = 0.0
     contract_compliance_rate_pct: float = 0.0
     result_correctness_rate_pct: float = 0.0
+    confusion_matrix: ConfusionMatrix = Field(default_factory=ConfusionMatrix)
+    latency: LatencySummary = Field(default_factory=LatencySummary)
     domain_compliance: Dict[str, float] = Field(default_factory=dict)
     records: List[AgentEvalRecord] = Field(default_factory=list)
+    protocol_disclaimer: str = "No external benchmark comparison is claimed; results are specific to the SRE frozen holdout protocol."
 
     def summary_markdown(self) -> str:
         md = [
             f"# 🤖 Agent Semantic Compliance Benchmark: {self.model_name}",
             "",
-            "| Evaluation Metric | Score | Industry Benchmark |",
-            "| :--- | :---: | :---: |",
-            f"| **Execution Success Rate** | **{self.execution_success_rate_pct:.1f}%** ({self.execution_success_count}/{self.total_evaluations}) | >90.0% (Spider/BIRD) |",
-            f"| **Semantic Contract Compliance** | **{self.contract_compliance_rate_pct:.1f}%** ({self.contract_compliant_count}/{self.total_evaluations}) | Expected Baseline <40% |",
-            f"| **Result Correctness vs Truth** | **{self.result_correctness_rate_pct:.1f}%** ({self.result_correct_count}/{self.total_evaluations}) | Ground-Truth Oracle |",
-            f"| **Average Latency** | **{self.avg_latency_ms:.1f}ms** | Sub-second Gateway |",
+            "> **Disclaimer:** " + self.protocol_disclaimer,
             "",
-            "### Domain-Specific Semantic Compliance",
+            "## 📊 Primary Metrics",
+            "",
+            "| Evaluation Metric | SRE Protocol Result | Interpretation |",
+            "| :--- | :---: | :--- |",
+            f"| **Execution Success** | **{self.execution_success_rate_pct:.1f}%** ({self.execution_success_count}/{self.total_evaluations}) | Valid executable SQL queries |",
+            f"| **Contract Compliance** | **{self.contract_compliance_rate_pct:.1f}%** ({self.contract_compliant_count}/{self.total_evaluations}) | Satisfies declared business invariants |",
+            f"| **Result Correctness** | **{self.result_correctness_rate_pct:.1f}%** ({self.result_correct_count}/{self.total_evaluations}) | Correct output under reference oracle & fixture |",
+            f"| **Mean Latency** | **{self.latency.mean_ms:.1f}ms** (p95: {self.latency.p95_ms:.1f}ms) | {self.latency.environment} |",
+            "",
+            "## 🧩 2x2 Semantic Compliance & Result Confusion Matrix",
+            "",
+            "| Category | Count | Proportion |",
+            "| :--- | :---: | :---: |",
+            f"| ✅ **Contract Compliant & Result Match** | {self.confusion_matrix.compliant_match} | {self._pct(self.confusion_matrix.compliant_match):.1f}% |",
+            f"| ⚠️ **Contract Compliant but Result Mismatch** | {self.confusion_matrix.compliant_mismatch} | {self._pct(self.confusion_matrix.compliant_mismatch):.1f}% |",
+            f"| 🚨 **Contract Violation but Result Match (Small Fixture)** | {self.confusion_matrix.violation_match} | {self._pct(self.confusion_matrix.violation_match):.1f}% |",
+            f"| ❌ **Contract Violation & Result Mismatch** | {self.confusion_matrix.violation_mismatch} | {self._pct(self.confusion_matrix.violation_mismatch):.1f}% |",
+            f"| ❓ **Unresolved (Incomplete Contract)** | {self.confusion_matrix.unresolved} | {self._pct(self.confusion_matrix.unresolved):.1f}% |",
+            f"| 💥 **Execution Error** | {self.confusion_matrix.execution_error} | {self._pct(self.confusion_matrix.execution_error):.1f}% |",
+            "",
+            "## 🏢 Domain-Specific Compliance",
             "",
             "| Domain | Compliance Rate |",
             "| :--- | :---: |",
@@ -58,14 +106,17 @@ class AgentBenchmarkReport(BaseModel):
 
         return "\n".join(md)
 
+    def _pct(self, count: int) -> float:
+        return (count / self.total_evaluations * 100.0) if self.total_evaluations > 0 else 0.0
+
 
 class BaselineAgentEvaluator:
     """Evaluates agent-generated SQL against SRE Semantic Firewall and ground-truth fixtures."""
 
-    def __init__(self, registry: ContractRegistry, strict_mode: bool = False):
-        from semantic_reliability.firewall.policy import PolicyEngine
+    def __init__(self, registry: ContractRegistry, strict_mode: bool = False, float_tol: float = 1e-4):
         self.registry = registry
         self.firewall = SemanticEvaluator(registry=registry, policy=PolicyEngine(strict_mode=strict_mode))
+        self.float_tol = float_tol
 
     def evaluate_candidate(
         self,
@@ -77,7 +128,6 @@ class BaselineAgentEvaluator:
     ) -> AgentEvalRecord:
         t0 = time.perf_counter()
 
-        import uuid
         # Step 1: Pre-Execution Firewall Check
         req = EvaluateRequest(
             request_id=f"req-{uuid.uuid4()}",
@@ -87,11 +137,12 @@ class BaselineAgentEvaluator:
             dialect=metric_def.dialect or "postgres",
         )
         resp = self.firewall.evaluate(req)
+        contract_compliant = (resp.decision == Decision.ALLOW)
 
-        # Step 2: Database Execution Check
+        # Step 2: Database Execution Check & Result Comparison
         con = duckdb.connect(":memory:")
         exec_success = False
-        result_correct = False
+        result_match = False
 
         if fixture_df is not None:
             try:
@@ -99,18 +150,16 @@ class BaselineAgentEvaluator:
                 res_cand = con.execute(generated_sql).df()
                 exec_success = True
 
-                # Compare with ground-truth SQL
                 res_true = con.execute(metric_def.sql).df()
-                if not res_cand.empty and not res_true.empty:
-                    # Robust dataframe equality comparison
-                    result_correct = res_cand.sort_index(axis=1).equals(res_true.sort_index(axis=1))
-                elif res_cand.empty and res_true.empty:
-                    result_correct = True
+                result_match = self._compare_dataframes(res_cand, res_true)
             except Exception:
                 exec_success = False
 
         con.close()
         latency = (time.perf_counter() - t0) * 1000.0
+
+        # Step 3: Classify into formal taxonomy
+        classification = self._classify(exec_success, contract_compliant, result_match, bool(resp.violations))
 
         return AgentEvalRecord(
             example_id=example_id,
@@ -118,22 +167,71 @@ class BaselineAgentEvaluator:
             domain=metric_def.metadata.get("domain", metric_def.tags[0] if metric_def.tags else "general"),
             prompt=metric_def.description or f"Calculate {metric_def.metric}",
             generated_sql=generated_sql,
+            classification=classification,
             execution_success=exec_success,
-            contract_compliant=(resp.decision == Decision.ALLOW),
+            contract_compliant=contract_compliant,
+            result_correct=result_match,
             firewall_decision=resp.decision.value,
             violations=[v.rule for v in resp.violations],
-            result_correct=result_correct,
             latency_ms=round(latency, 2),
         )
+
+    def _compare_dataframes(self, df_cand: pd.DataFrame, df_true: pd.DataFrame) -> bool:
+        """Order-insensitive, numeric-tolerant dataframe comparator."""
+        if df_cand is None or df_true is None:
+            return False
+        if df_cand.empty and df_true.empty:
+            return True
+        if df_cand.empty != df_true.empty:
+            return False
+        if len(df_cand) != len(df_true) or df_cand.shape[1] != df_true.shape[1]:
+            return False
+
+        try:
+            # Align column names if identical
+            if set(df_cand.columns) == set(df_true.columns):
+                c_sorted = df_cand[sorted(df_cand.columns)].sort_values(by=sorted(df_cand.columns)).reset_index(drop=True)
+                t_sorted = df_true[sorted(df_true.columns)].sort_values(by=sorted(df_true.columns)).reset_index(drop=True)
+            else:
+                c_sorted = df_cand.sort_values(by=list(df_cand.columns)).reset_index(drop=True)
+                t_sorted = df_true.sort_values(by=list(df_true.columns)).reset_index(drop=True)
+
+            for i in range(c_sorted.shape[1]):
+                col_c = c_sorted.iloc[:, i]
+                col_t = t_sorted.iloc[:, i]
+                if pd.api.types.is_numeric_dtype(col_c) and pd.api.types.is_numeric_dtype(col_t):
+                    diff = np.abs(col_c.fillna(0).to_numpy() - col_t.fillna(0).to_numpy())
+                    if np.any(diff > self.float_tol):
+                        return False
+                else:
+                    if not (col_c.astype(str).to_numpy() == col_t.astype(str).to_numpy()).all():
+                        return False
+            return True
+        except Exception:
+            return False
+
+    def _classify(self, exec_success: bool, contract_compliant: bool, result_match: bool, has_violations: bool) -> EvalClassification:
+        if not exec_success:
+            return EvalClassification.EXECUTION_ERROR
+        if contract_compliant and result_match:
+            return EvalClassification.CONTRACT_COMPLIANT_RESULT_MATCH
+        if contract_compliant and not result_match:
+            return EvalClassification.CONTRACT_COMPLIANT_RESULT_MISMATCH
+        if not contract_compliant and result_match:
+            return EvalClassification.CONTRACT_VIOLATION_RESULT_MATCH
+        if not contract_compliant and not result_match:
+            return EvalClassification.CONTRACT_VIOLATION_RESULT_MISMATCH
+        return EvalClassification.UNRESOLVED_CONTRACT
 
     def run_benchmark(
         self,
         candidates: List[Dict[str, Any]],
         model_name: str = "Baseline-Agent",
     ) -> AgentBenchmarkReport:
-        """Runs evaluation over a list of candidate items {metric_def, generated_sql, fixture_df}."""
         records: List[AgentEvalRecord] = []
         domain_counts: Dict[str, List[bool]] = {}
+        matrix = ConfusionMatrix()
+        latencies: List[float] = []
 
         for item in candidates:
             rec = self.evaluate_candidate(
@@ -144,13 +242,34 @@ class BaselineAgentEvaluator:
                 example_id=item.get("example_id", f"eval_{len(records)+1}"),
             )
             records.append(rec)
+            latencies.append(rec.latency_ms)
             domain_counts.setdefault(rec.domain, []).append(rec.contract_compliant)
+
+            if rec.classification == EvalClassification.CONTRACT_COMPLIANT_RESULT_MATCH:
+                matrix.compliant_match += 1
+            elif rec.classification == EvalClassification.CONTRACT_COMPLIANT_RESULT_MISMATCH:
+                matrix.compliant_mismatch += 1
+            elif rec.classification == EvalClassification.CONTRACT_VIOLATION_RESULT_MATCH:
+                matrix.violation_match += 1
+            elif rec.classification == EvalClassification.CONTRACT_VIOLATION_RESULT_MISMATCH:
+                matrix.violation_mismatch += 1
+            elif rec.classification == EvalClassification.EXECUTION_ERROR:
+                matrix.execution_error += 1
+            else:
+                matrix.unresolved += 1
 
         total = len(records)
         exec_count = sum(1 for r in records if r.execution_success)
         comp_count = sum(1 for r in records if r.contract_compliant)
         corr_count = sum(1 for r in records if r.result_correct)
-        avg_lat = (sum(r.latency_ms for r in records) / total) if total > 0 else 0.0
+
+        l_arr = np.array(latencies) if latencies else np.array([0.0])
+        lat_summary = LatencySummary(
+            mean_ms=round(float(np.mean(l_arr)), 2),
+            p50_ms=round(float(np.percentile(l_arr, 50)), 2),
+            p95_ms=round(float(np.percentile(l_arr, 95)), 2),
+            p99_ms=round(float(np.percentile(l_arr, 99)), 2),
+        )
 
         domain_comp = {
             d: round((sum(bools) / len(bools)) * 100.0, 1)
@@ -163,10 +282,11 @@ class BaselineAgentEvaluator:
             execution_success_count=exec_count,
             contract_compliant_count=comp_count,
             result_correct_count=corr_count,
-            avg_latency_ms=round(avg_lat, 2),
             execution_success_rate_pct=round((exec_count / total * 100.0) if total > 0 else 0.0, 1),
             contract_compliance_rate_pct=round((comp_count / total * 100.0) if total > 0 else 0.0, 1),
             result_correctness_rate_pct=round((corr_count / total * 100.0) if total > 0 else 0.0, 1),
+            confusion_matrix=matrix,
+            latency=lat_summary,
             domain_compliance=domain_comp,
             records=records,
         )
