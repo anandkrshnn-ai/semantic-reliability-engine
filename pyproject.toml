@@ -7,8 +7,8 @@ name = "semantic-reliability-engine"
 version = "0.1.0"
 description = "AST-level Semantic Drift Detection, Metric Compilation, and Chaos Mutation Testing for SQL Data Pipelines"
 readme = "README.md"
-requires-python = ">=3.9"
-license = { text = "MIT" }
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
 authors = [
     { name = "Semantic Reliability Team" }
 ]
@@ -18,6 +18,10 @@ dependencies = [
     "pydantic>=2.0.0",
     "click>=8.1.0",
     "rich>=13.0.0",
+    "duckdb>=1.0.0",
+    "pandas>=2.0.0",
+    "jsonschema>=4.0.0",
+    "requests>=2.31.0",
 ]
 
 [project.optional-dependencies]
@@ -32,3 +36,4 @@ sre = "semantic_reliability.cli:main"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+pythonpath = ["."]
