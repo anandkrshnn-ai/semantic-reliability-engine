@@ -1,7 +1,14 @@
 <div align="center">
 
-# 🛡️ Semantic Reliability Engine
-**AST-Level Semantic Drift Detection, Centralized Metric Compilation, and Chaos Mutation Testing for SQL Pipelines & Data Contracts**
+# 🛡️ Semantic Reliability Engine (SRE)
+
+[![CI & Benchmark Integrity](https://github.com/anandkrshnn-ai/semantic-reliability-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/anandkrshnn-ai/semantic-reliability-engine/actions/workflows/ci.yml)
+[![Pre-release](https://img.shields.io/badge/release-v1.0.0--phase7-blue.svg)](https://github.com/anandkrshnn-ai/semantic-reliability-engine/releases/tag/v1.0.0-phase7)
+[![Tests: 70 Passing](https://img.shields.io/badge/tests-70%20passing-brightgreen.svg)](https://github.com/anandkrshnn-ai/semantic-reliability-engine)
+[![Benchmark Integrity](https://img.shields.io/badge/protocol_integrity-VERIFIED-brightgreen.svg)](https://github.com/anandkrshnn-ai/semantic-reliability-engine/blob/main/benchmark_corpus/holdout/holdout_protocol.yaml)
+
+> **Semantic mutation testing for analytics engineering & agentic data systems.**  
+> *Catch meaning-changing SQL defects that pass schema checks, dry runs, and traditional dbt data tests.**
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![SQLGlot](https://img.shields.io/badge/SQLGlot-30.0+-orange.svg)](https://github.com/tobymao/sqlglot)
