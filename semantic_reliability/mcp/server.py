@@ -28,8 +28,11 @@ class ScosMcpServer:
         contract_dir: Optional[str | Path] = None,
         allowed_domains: Optional[List[str]] = None,
         max_request_bytes: int = 1_000_000,
-        signing_secret: str = "sre-audit-signing-secret",
+        signing_secret: Optional[str] = None,
     ):
+        import os
+        import secrets
+
         if registry:
             self.registry = registry
         elif contract_dir:
@@ -42,7 +45,7 @@ class ScosMcpServer:
         self.audit_log: List[McpAuditEvent] = []
         self.checkpoints: List[AuditCheckpoint] = []
         self.max_request_bytes = max_request_bytes
-        self.signing_secret = signing_secret
+        self.signing_secret = signing_secret or os.environ.get("SRE_AUDIT_SIGNING_KEY") or secrets.token_hex(32)
 
     def handle_request(
         self,

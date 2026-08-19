@@ -96,7 +96,11 @@ class AuditCheckpoint(BaseModel):
         """Computes HMAC-SHA256 message authentication code over checkpoint envelope."""
         import hmac
         import os
-        key = signing_key or os.environ.get("SRE_AUDIT_SIGNING_KEY", "sre-audit-signing-secret")
+        key = signing_key or os.environ.get("SRE_AUDIT_SIGNING_KEY")
+        if not key:
+            raise ValueError(
+                "SRE_AUDIT_SIGNING_KEY environment variable or explicit signing_key must be configured to generate cryptographic audit signatures."
+            )
         canonical_payload = (
             f"{self.checkpoint_id}:{self.sequence_end}:{self.last_event_hash}:"
             f"{self.checkpoint_timestamp}:{self.key_id}"
