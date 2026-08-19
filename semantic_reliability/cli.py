@@ -703,6 +703,89 @@ def audit_gym_cli(dataset, json_out):
         sys.exit(1)
 
 
+@main.command(name="bq-evaluate")
+@click.option("--sql", required=True, help="Path to SQL file or raw SQL string")
+@click.option("--contract", required=True, type=click.Path(exists=True), help="Metric contract YAML")
+@click.option("--project-id", default=None, help="GCP Project ID (optional)")
+def bq_evaluate(sql, contract, project_id):
+    """Evaluate SQL against BigQuery dry-run and semantic contract."""
+    from semantic_reliability.adapters.bigquery import BigQueryDryRunAdapter
+    from semantic_reliability.compiler.compiler import MetricCompiler
+
+    contract_text = Path(contract).read_text(encoding="utf-8")
+    compiler = MetricCompiler.from_yaml_str(contract_text)
+    metric = compiler.definition
+
+    sql_path = Path(sql)
+    if sql_path.exists():
+        sql_content = sql_path.read_text(encoding="utf-8")
+    else:
+        sql_content = sql
+
+    adapter = BigQueryDryRunAdapter(project_id=project_id)
+    result = adapter.evaluate(sql_content, metric, dialect="bigquery")
+
+    click.echo(json.dumps(result, indent=2))
+
+    if result["decision"] == "DENY":
+        sys.exit(1)
+    elif result["decision"] == "REQUIRE_REVIEW":
+        sys.exit(2)
+    sys.exit(0)
+
+
+@main.command(name="dbt-check")
+@click.option("--manifest", required=True, type=click.Path(exists=True), help="Path to target/manifest.json")
+@click.option("--model", required=True, help="dbt model name to check")
+@click.option("--contract", required=True, type=click.Path(exists=True), help="Metric contract YAML")
+@click.option("--fail-on", type=click.Choice(["critical", "high", "any"]), default="critical")
+@click.option("--output-json", type=click.Path(), default=None)
+@click.option("--output-sarif", type=click.Path(), default=None)
+def dbt_check(manifest, model, contract, fail_on, output_json, output_sarif):
+    """Check a compiled dbt model for semantic drift against a metric contract."""
+    from semantic_reliability.adapters.dbt_integration import DbtSreChecker
+    from semantic_reliability.harness.sarif_exporter import SARIFExporter
+    from semantic_reliability.drift.rules import DriftSeverity, SemanticDrift
+
+    checker = DbtSreChecker(manifest)
+    result = checker.check(model, contract)
+
+    drifts = [SemanticDrift(**d) for d in result["drift_alerts"]]
+
+    if output_json:
+        out_p = Path(output_json)
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(json.dumps(result, indent=2), encoding="utf-8")
+        click.echo(f"JSON report written to {output_json}")
+
+    if output_sarif:
+        SARIFExporter.export_to_file(drifts, output_sarif, file_path=f"models/{model}.sql")
+        click.echo(f"SARIF report written to {output_sarif}")
+
+    sev_rank = {
+        "critical": DriftSeverity.CRITICAL,
+        "high": DriftSeverity.HIGH,
+        "any": DriftSeverity.LOW,
+    }
+    threshold = sev_rank[fail_on]
+
+    sev_order = {
+        DriftSeverity.INFO: 0,
+        DriftSeverity.LOW: 1,
+        DriftSeverity.MEDIUM: 2,
+        DriftSeverity.HIGH: 3,
+        DriftSeverity.CRITICAL: 4,
+        DriftSeverity.FATAL: 5,
+    }
+
+    if any(sev_order.get(d.severity, 0) >= sev_order.get(threshold, 0) for d in drifts):
+        click.echo(f"❌ CI BLOCKED: Semantic drift detected at or above {threshold.value} severity.")
+        sys.exit(1)
+
+    click.echo(f"✅ dbt model '{model}' is semantically compliant with contract '{result['contract']}'.")
+    sys.exit(0)
+
+
 if __name__ == "__main__":
     main()
 
