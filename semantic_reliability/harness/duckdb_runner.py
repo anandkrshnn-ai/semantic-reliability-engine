@@ -60,6 +60,12 @@ class DuckDBFixtureRunner:
         self.con = duckdb.connect(":memory:")
         self._load_fixtures(fixtures)
 
+    def close(self) -> None:
+        try:
+            self.con.close()
+        except Exception:
+            pass
+
     def _load_fixtures(self, fixtures: Optional[Dict[str, Any]] = None) -> None:
         if fixtures:
             for table_name, data in fixtures.items():
