@@ -91,7 +91,7 @@ To resolve this gap, we introduce \textbf{SCOS-MCP}, a comprehensive architectur
 
 \paragraph{Semantic Layers and Metrics Governance:} Modern data modeling tools (e.g., dbt, Looker) define metrics declaratively in YAML. However, these systems function primarily as query compilers rather than dynamic evaluation oracles for arbitrary agent reasoning.
 
-\paragraph{Agent Evaluation and Tool Use:} Trajectory-level agent evaluation (e.g., SWE-bench \cite{jimenez2023swebench}, AgentBench \cite{liu2023agentbench}, MCP-Bench \cite{mcpbench2024}) highlights the necessity of evaluating intermediate tool invocations, parameter grounding, and appropriate abstention.
+\paragraph{Agent Evaluation and Tool Use:} Trajectory-level agent evaluation (e.g., SWE-bench \cite{jimenez2023swebench}, AgentBench \cite{liu2023agentbench}, and Model Context Protocol architectures \cite{anthropic2024mcp}) highlights the necessity of evaluating intermediate tool invocations, parameter grounding, and appropriate abstention.
 
 \paragraph{Model Context Protocol (MCP):} Anthropic's Model Context Protocol provides an open standard for connecting AI agents to external resources and tools. SCOS-MCP builds upon the MCP specification, implementing strict read-only security boundaries, AST complexity ceilings, and cryptographic audit chaining.
 
