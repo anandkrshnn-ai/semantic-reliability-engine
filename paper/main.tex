@@ -214,14 +214,14 @@ On the frozen holdout corpus, SCOS detected 11 of 18 valid executable semantic m
 \resizebox{\textwidth}{!}{
 \begin{tabular}{lcccccccc}
 \toprule
-\textbf{Corpus Track} & $|\mathcal{I}|$ & $\sum V_i$ & \textbf{Standard (pooled)} & \textbf{SCOS (pooled)} & \textbf{Standard (macro)} & \textbf{SCOS (macro)} & \textbf{Pooled Gain ($\Delta_{\text{micro}}$)} & \textbf{Macro Gain ($\Delta_{\text{macro}}$)} \\
+\textbf{Corpus Track} & $|\mathcal{I}|$ & $\sum V_i$ & \textbf{Minimal Struct (pooled)} & \textbf{SCOS (pooled)} & \textbf{Minimal Struct (macro)} & \textbf{SCOS (macro)} & \textbf{Pooled Gain ($\Delta_{\text{micro}}$)} & \textbf{Macro Gain ($\Delta_{\text{macro}}$)} \\
 \midrule
 Development Track & 8 & 25 & 16.0\% (4/25) & \textbf{64.0\%} (16/25) & 15.0\% & \textbf{60.4\%} & \textbf{+48.0 pp} & \textbf{+45.4 pp} \\
 Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & 0.0\% & \textbf{61.1\%} & \textbf{+61.1 pp} & \textbf{+61.1 pp} \\
 \bottomrule
 \end{tabular}
 }
-\caption{Completed offline mutation benchmark across development and frozen holdout tracks; percentages are rounded to one decimal place. Standard structural data quality suites (e.g., standard dbt unique/not\_null and schema linters) allow $\approx 84\text{--}100\%$ of semantic defects to survive silently. On the frozen holdout corpus, SCOS caught 11 of 18 valid executable semantic defects, while the specified standard structural baseline caught 0 of 18; the pooled difference was 61.1 percentage points.}
+\caption{Completed offline mutation benchmark across development and frozen holdout tracks; percentages are rounded to one decimal place. Minimal structural schema checks (\texttt{not\_null}, \texttt{unique\_key}, \texttt{row\_count\_bounds}) allow $\approx 84\text{--}100\%$ of semantic defects to execute without triggering errors because mutated outputs remain structurally valid non-null rows. On the frozen holdout corpus, SCOS caught 11 of 18 valid executable semantic defects, while the specified minimal structural baseline caught 0 of 18; the pooled difference was 61.1 percentage points.}
 \label{tab:mutation_results}
 \end{table}
 
@@ -230,7 +230,7 @@ Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & 0.0\% &
 \small
 \begin{tabular}{lcccccc}
 \toprule
-\textbf{Metric Contract ID ($i$)} & \textbf{Track Split} & $V_i$ & $C_i^{(\text{standard})}$ & $C_i^{(\text{SCOS})}$ & \textbf{Standard Rate} & \textbf{SCOS Rate} \\
+\textbf{Metric Contract ID ($i$)} & \textbf{Track Split} & $V_i$ & $C_i^{(\text{struct})}$ & $C_i^{(\text{SCOS})}$ & \textbf{Struct Rate} & \textbf{SCOS Rate} \\
 \midrule
 \texttt{average\_order\_value} & Dev & 2 & 0 & 1 & 0.0\% & 50.0\% \\
 \texttt{checkout\_conversion\_rate} & Dev & 3 & 1 & 1 & 33.3\% & 33.3\% \\

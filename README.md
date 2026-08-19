@@ -1,13 +1,13 @@
 # Semantic Reliability Engine (SRE) & SCOS-MCP
 
 [![CI](https://github.com/anandkrshnn-ai/semantic-reliability-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/anandkrshnn-ai/semantic-reliability-engine/actions)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Specification: SCOS v1.0](https://img.shields.io/badge/spec-SCOS_v1.0-green.svg)](spec/SCOS_V1_SPECIFICATION.md)
 
 **Contract-Grounded Evaluation and Runtime Semantic Guardrails for Business Text-to-SQL AI Agents.**
 
-> *AI-generated SQL can be executable and still be semantically wrong. SCOS makes business meaning explicit, testable, and discoverable by agents.*
+> *An AI-assisted research prototype for contract-grounded SQL mutation testing and semantic validation. Its frozen-corpus mutation results are reproducible against a minimal structural baseline; broader baseline comparisons, live-agent evaluation, production integrations, licensing, and security claims remain to be completed.*
 
 ---
 
@@ -15,7 +15,9 @@
 
 Autonomous AI agents generate syntactically valid SQL that executes cleanly on warehouse engines (BigQuery, Snowflake, Databricks, DuckDB), yet **violates core business definitions** (e.g., dropping required active-cohort filters, omitting refund deductions, or miscalculating financial grain).
 
-Standard data observability tests evaluate table syntax and row counts; they cannot detect when an agent hallucinates unanchored domain logic.
+Standard out-of-the-box structural data quality tests (`not_null`, `unique`, `row_count_bounds`) verify table shapes and nullity, but cannot detect when dynamic SQL logic drops domain arithmetic. SCOS defines declarative AST invariant contracts to catch these semantic regressions automatically.
+
+> **Research Prototype Notice:** SCOS detects more injected semantic mutations than the specified minimal structural baseline on the frozen 14-contract corpus. The `gym` and `adapters` packages are experimental research modules.
 
 ---
 
