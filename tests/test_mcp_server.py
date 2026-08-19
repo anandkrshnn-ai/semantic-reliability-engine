@@ -186,3 +186,41 @@ def test_mcp_json_rpc_error_codes(mcp_server):
     data_sql = json.loads(resp_sql["result"]["content"][0]["text"])
     assert data_sql["compliant"] is False
     assert data_sql["decision"] == "DENY"
+
+
+def test_scos_registry_and_security(tmp_path):
+    from semantic_reliability.mcp.security import hash_sql, enforce_limits
+    from semantic_reliability.mcp.registry import SCOSRegistry
+
+    # 1. Test hash_sql
+    h = hash_sql("SELECT * FROM transactions")
+    assert len(h) == 64
+
+    # 2. Test enforce_limits
+    enforce_limits({"sql": "SELECT 1", "key": "val"})
+    with pytest.raises(ValueError) as exc_sql:
+        enforce_limits({"sql": "x" * 60_000})
+    assert "exceeds limit" in str(exc_sql.value)
+
+    # 3. Test SCOSRegistry URN and URI resolution
+    c_yaml = tmp_path / "net_revenue.yaml"
+    c_yaml.write_text("""
+metric: net_revenue
+owner: finance
+grain: customer_month
+sql: "SELECT customer_id, SUM(amount) AS net_revenue FROM transactions WHERE status = 'active' GROUP BY 1"
+metadata:
+  domain: finance
+""", encoding="utf-8")
+
+    registry = SCOSRegistry(tmp_path)
+    metrics = registry.list_metrics()
+    assert "urn:scos:finance:net_revenue" in metrics
+
+    contract = registry.get_contract("urn:scos:finance:net_revenue")
+    assert contract.metric == "net_revenue"
+
+    # Test URI resolution
+    data = registry.resolve_uri("scos://contracts/finance/net_revenue/1.0.0")
+    assert data["metric"] == "net_revenue"
+
