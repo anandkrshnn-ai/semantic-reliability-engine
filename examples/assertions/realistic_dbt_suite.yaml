@@ -1,0 +1,30 @@
+suite_name: realistic_dbt_suite
+description: Tier-2 Extended dbt Data Quality Suite with range bounds, categorical domain checks, referential integrity, and singular metric tests.
+assertions:
+  - type: not_null
+    columns:
+      - customer_id
+      - reporting_month
+      - net_revenue
+  - type: unique_key
+    columns:
+      - customer_id
+      - reporting_month
+  - type: row_count_bounds
+    min_rows: 1
+  - type: accepted_range
+    column: net_revenue
+    min_value: 0.0
+    description: Net revenue cannot be negative for active cohorts
+  - type: accepted_values
+    column: status
+    values:
+      - active
+      - pending
+  - type: relationships
+    from_column: customer_id
+    to_table: customers
+    to_column: id
+  - type: singular_sql_test
+    name: assert_no_unaccounted_refunds
+    sql: "SELECT * FROM {{ model }} WHERE net_revenue > gross_revenue"
