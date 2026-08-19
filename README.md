@@ -107,6 +107,15 @@ pytest tests/ -v
 
 ---
 
+## 📜 Provenance & AI-Assisted Development Disclosure
+
+This repository was developed with substantial AI-assisted coding in an exploratory session. Human review and independent empirical verification are ongoing. 
+
+- **Verified Core:** The AST mutation engine (`semantic_reliability/mutations`), DuckDB fixture test harness, 14-contract benchmark corpus, and the 112-test unit test suite have been independently executed and verified. The reported holdout mutation catch rate (+61.1 pp) reflects code-path reproducibility against the specified minimal structural baseline (`not_null`, `unique_key`, `row_count_bounds`).
+- **Experimental / Scaffolding Modules:** The `gym/` dataset formatting module, live agent loop adapters (`adapters/`), and enterprise governance collateral (CISO whitepaper, cryptographic audit envelope, and FinOps guides) represent research scaffolding and exploratory prototypes. They should not be treated as externally audited enterprise platforms or live model evaluations beyond the exact procedures documented in the repository.
+
+---
+
 ## 📄 License
 
 Apache License 2.0. See [LICENSE](LICENSE) for details.
