@@ -189,7 +189,7 @@ To enable zero-compute regression testing, SCOS-MCP records full agent execution
 \subsection{Completed Holdout Mutation Analysis}
 Prior to live model evaluation, we validated the SCOS invariant compiler on our development and frozen holdout corpora using denominator-precise AST chaos mutations across 5 mutation operators (Filter Drop, Boundary Shift, Aggregation Swap, Coalesce Bypass, Grain Drop). 
 
-Let $M$ denote the total number of metric contracts in a track, let $V_i$ denote the number of valid injected semantic mutations for contract $i$, and let $C_i^{(m)}$ denote the number of mutations detected by testing method $m \in \{\text{standard}, \text{SCOS}\}$. We define the eligible contract set as $\mathcal{I} = \{i \in \{1, \dots, M\} : V_i > 0\}$. In our benchmark, all 14 evaluated metric contracts meet denominator eligibility: $|\mathcal{I}_{\text{dev}}| = 8$ ($\sum V_{\text{dev}} = 25$) and $|\mathcal{I}_{\text{holdout}}| = 6$ ($\sum V_{\text{holdout}} = 18$). Notably, contracts with zero detections (e.g., \texttt{customer\_retention\_rate} in Dev, \texttt{hospital\_readmission\_rate} in Holdout) satisfy $V_i > 0$ and remain strictly in the denominator.
+Let $M$ denote the total number of metric contracts in a track, let $V_i$ denote the number of valid injected semantic mutations for contract $i$, and let $C_i^{(m)}$ denote the number of mutations detected by testing method $m \in \{\text{standard}, \text{SCOS}\}$. We define the eligible contract set as $\mathcal{I} = \{i \in \{1, \dots, M\} : V_i > 0\}$. All 14 metric contracts represented in the reported benchmark corpus meet denominator eligibility: $|\mathcal{I}_{\text{dev}}| = 8$ ($\sum V_{\text{dev}} = 25$) and $|\mathcal{I}_{\text{holdout}}| = 6$ ($\sum V_{\text{holdout}} = 18$). Notably, contracts with zero detections (e.g., \texttt{customer\_retention\_rate} in Dev, \texttt{hospital\_readmission\_rate} in Holdout) satisfy $V_i > 0$ and remain strictly in the denominator.
 
 We define two distinct estimands:
 \begin{enumerate}[noitemsep]
@@ -203,7 +203,7 @@ We define two distinct estimands:
     \end{equation}
 \end{enumerate}
 
-On the frozen holdout split, the SCOS semantic gate detected 11 of 18 valid executable defects, whereas the specified standard structural baseline detected none. On the development split, SCOS detected 16 of 25 defects compared with 4 detected by the baseline. These results measure mutation-detection performance on the frozen corpus and do not establish production-wide semantic correctness.
+On the frozen holdout corpus, SCOS detected 11 of 18 valid executable semantic mutations, while the specified structural baseline detected 0 of 18. On the development corpus, SCOS detected 16 of 25, compared with 4 of 25 for the baseline. These measurements characterize mutation-detection performance on the reported corpus and are not evidence of universal production semantic correctness.
 
 \begin{table}[ht!]
 \centering
@@ -218,7 +218,7 @@ Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & 0.0\% &
 \bottomrule
 \end{tabular}
 }
-\caption{Completed offline mutation benchmark: Standard structural data quality suites (e.g., standard dbt unique/not\_null and schema linters) allow $\approx 84\text{--}100\%$ of semantic defects to survive silently. On the frozen holdout corpus, SCOS caught 11 of 18 valid executable semantic defects, while the specified standard structural baseline caught 0 of 18; the pooled difference was 61.1 percentage points.}
+\caption{Completed offline mutation benchmark across development and frozen holdout tracks; percentages are rounded to one decimal place. Standard structural data quality suites (e.g., standard dbt unique/not\_null and schema linters) allow $\approx 84\text{--}100\%$ of semantic defects to survive silently. On the frozen holdout corpus, SCOS caught 11 of 18 valid executable semantic defects, while the specified standard structural baseline caught 0 of 18; the pooled difference was 61.1 percentage points.}
 \label{tab:mutation_results}
 \end{table}
 
@@ -250,7 +250,7 @@ Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & 0.0\% &
 \textit{Holdout Track Totals / Averages} & \textit{Holdout} & \textit{18} & \textit{0} & \textit{11} & \textit{0.0\% (macro)} & \textit{61.1\% (macro)} \\
 \bottomrule
 \end{tabular}
-\caption{Granular per-contract audit table across all 14 evaluated benchmark metric contracts, documenting exact valid mutation counts, detection frequencies, and individual rates underlying the aggregate benchmark metrics.}
+\caption{Granular per-contract audit table across all 14 evaluated benchmark metric contracts; percentages are rounded to one decimal place. Documents exact valid mutation counts, detection frequencies, and individual rates underlying the aggregate benchmark metrics.}
 \label{tab:per_model_audit}
 \end{table}
 
