@@ -3,6 +3,7 @@ import pytest
 
 from semantic_reliability.compiler.schema import MetricDefinition, SemanticInvariants, PopulationInvariant
 from semantic_reliability.firewall.engine import ContractRegistry
+from semantic_reliability.mcp.models import CallerIdentity
 from semantic_reliability.mcp.server import ScosMcpServer
 
 
@@ -78,7 +79,8 @@ def test_mcp_call_validate_sql_compliant(mcp_server):
             }
         }
     }
-    resp = mcp_server.handle_request(req)
+    caller = CallerIdentity(client_id="finance_bot", tenant_id="acme_corp")
+    resp = mcp_server.handle_request(req, caller=caller)
     content = json.loads(resp["result"]["content"][0]["text"])
     assert content["compliant"] is True
     assert content["decision"] == "ALLOW"
@@ -107,9 +109,8 @@ def test_mcp_call_validate_sql_violation(mcp_server):
     assert len(content["violations"]) > 0
 
 
-def test_mcp_audit_hash_chain_integrity(mcp_server):
-    # Execute two tool calls
-    for i in range(2):
+def test_mcp_audit_hash_chain_and_signed_checkpoint(mcp_server):
+    for i in range(3):
         mcp_server.handle_request({
             "jsonrpc": "2.0",
             "id": 100 + i,
@@ -123,11 +124,18 @@ def test_mcp_audit_hash_chain_integrity(mcp_server):
             }
         })
 
-    assert len(mcp_server.audit_log) == 2
-    # Verify cryptographic hash chaining
+    assert len(mcp_server.audit_log) == 3
+    # 1. Verify tamper-evident hash chain
     assert mcp_server.verify_audit_chain() is True
-    assert mcp_server.audit_log[0].previous_event_hash == ScosMcpServer.GENESIS_HASH
-    assert mcp_server.audit_log[1].previous_event_hash == mcp_server.audit_log[0].event_hash
+
+    # 2. Create signed checkpoint
+    cp = mcp_server.create_checkpoint()
+    assert cp.sequence_end == 3
+    assert cp.last_event_hash == mcp_server.audit_log[-1].event_hash
+    assert len(cp.checkpoint_signature) == 64
+
+    # 3. Verify checkpoint signature
+    assert mcp_server.verify_checkpoint(cp) is True
 
 
 def test_mcp_domain_authorization_scoping():
@@ -139,7 +147,6 @@ def test_mcp_domain_authorization_scoping():
         metric="patient_vitals", owner="health", grain="day", sql="SELECT 1", metadata={"domain": "healthcare"}
     ))
 
-    # Server restricted to 'finance' only
     scoped_server = ScosMcpServer(registry=registry, allowed_domains=["finance"])
 
     # 1. List metrics should only return finance
@@ -188,6 +195,40 @@ def test_mcp_json_rpc_error_codes(mcp_server):
     assert data_sql["decision"] == "DENY"
 
 
+def test_mcp_ast_complexity_and_deep_nesting(mcp_server):
+    # 1. Deeply nested Boolean expressions (should parse and validate correctly)
+    nested_where = " AND ".join([f"x{i} = {i}" for i in range(10)])
+    complex_sql = f"SELECT customer_id, SUM(amount) AS net_revenue FROM transactions WHERE status = 'active' AND ({nested_where}) GROUP BY 1"
+    resp_comp = mcp_server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 50,
+        "method": "tools/call",
+        "params": {
+            "name": "scos_validate_sql",
+            "arguments": {"metric_id": "net_revenue", "sql": complex_sql}
+        }
+    })
+    data_comp = json.loads(resp_comp["result"]["content"][0]["text"])
+    assert data_comp["compliant"] is True
+    assert data_comp["decision"] == "ALLOW"
+
+    # 2. Massive AST nodes exceeding MAX_AST_NODES limit (500)
+    massive_predicates = " OR ".join([f"col_{i} = 'value_{i}'" for i in range(300)])
+    massive_sql = f"SELECT customer_id, SUM(amount) AS net_revenue FROM transactions WHERE status = 'active' AND ({massive_predicates}) GROUP BY 1"
+    resp_massive = mcp_server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 51,
+        "method": "tools/call",
+        "params": {
+            "name": "scos_validate_sql",
+            "arguments": {"metric_id": "net_revenue", "sql": massive_sql}
+        }
+    })
+    data_massive = json.loads(resp_massive["result"]["content"][0]["text"])
+    assert data_massive["decision"] == "DENY"
+    assert data_massive["violations"][0]["rule"] == "complexity_limit"
+
+
 def test_scos_registry_and_security(tmp_path):
     from semantic_reliability.mcp.security import hash_sql, enforce_limits
     from semantic_reliability.mcp.registry import SCOSRegistry
@@ -223,4 +264,3 @@ metadata:
     # Test URI resolution
     data = registry.resolve_uri("scos://contracts/finance/net_revenue/1.0.0")
     assert data["metric"] == "net_revenue"
-
