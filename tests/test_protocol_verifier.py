@@ -7,7 +7,7 @@ def test_holdout_protocol_verifier_runs():
     res = ProtocolVerifier.verify_holdout_protocol()
     assert isinstance(res, ProtocolIntegrityResult)
     assert res.declared_protocol.get("protocol_version") == "1.0"
-    assert res.declared_protocol.get("freeze_tag") == "v1.0.0-phase6"
+    assert res.declared_protocol.get("freeze_tag") == "v1.0.0-phase7"
 
 
 def test_holdout_protocol_detects_mismatched_commit(tmp_path):
