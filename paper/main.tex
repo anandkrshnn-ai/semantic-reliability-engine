@@ -189,7 +189,7 @@ To enable zero-compute regression testing, SCOS-MCP records full agent execution
 \subsection{Completed Holdout Mutation Analysis}
 Prior to live model evaluation, we validated the SCOS invariant compiler on our development and frozen holdout corpora using denominator-precise AST chaos mutations across 5 mutation operators (Filter Drop, Boundary Shift, Aggregation Swap, Coalesce Bypass, Grain Drop). 
 
-Let $M$ denote the total number of metric models in a track, let $V_i$ denote the number of valid injected semantic mutations for model $i$, and let $C_i^{(m)}$ denote the number of mutations detected by testing method $m \in \{\text{standard}, \text{SCOS}\}$. We define the eligible model set as $\mathcal{I} = \{i \in \{1, \dots, M\} : V_i > 0\}$. In our benchmark, all models meet denominator eligibility: $|\mathcal{I}_{\text{dev}}| = 8$ ($V_{\text{dev}} = 24$) and $|\mathcal{I}_{\text{holdout}}| = 6$ ($V_{\text{holdout}} = 18$).
+Let $M$ denote the total number of metric models in a track, let $V_i$ denote the number of valid injected semantic mutations for model $i$, and let $C_i^{(m)}$ denote the number of mutations detected by testing method $m \in \{\text{standard}, \text{SCOS}\}$. We define the eligible model set as $\mathcal{I} = \{i \in \{1, \dots, M\} : V_i > 0\}$. In our benchmark, all 14 evaluated models meet denominator eligibility: $|\mathcal{I}_{\text{dev}}| = 8$ ($\sum V_{\text{dev}} = 25$) and $|\mathcal{I}_{\text{holdout}}| = 6$ ($\sum V_{\text{holdout}} = 18$). Notably, models with zero detections (e.g., \texttt{customer\_retention\_rate} in Dev, \texttt{hospital\_readmission\_rate} in Holdout) satisfy $V_i > 0$ and remain strictly in the denominator.
 
 We define two distinct estimands:
 \begin{enumerate}[noitemsep]
@@ -197,7 +197,7 @@ We define two distinct estimands:
     \begin{equation}
     R_{\text{micro}}^{(m)} = \frac{\sum_{i \in \mathcal{I}} C_i^{(m)}}{\sum_{i \in \mathcal{I}} V_i}, \qquad \Delta_{\text{micro}} = R_{\text{micro}}^{(\text{SCOS})} - R_{\text{micro}}^{(\text{standard})}
     \end{equation}
-    \item \textbf{Macro-Averaged Catch Rate:} Unweighted mean across individual models to evaluate dispersion:
+    \item \textbf{Macro-Averaged Catch Rate:} Unweighted mean across individual models to evaluate cross-model dispersion:
     \begin{equation}
     R_{\text{macro}}^{(m)} = \frac{1}{|\mathcal{I}|} \sum_{i \in \mathcal{I}} \frac{C_i^{(m)}}{V_i}, \qquad \Delta_{\text{macro}} = R_{\text{macro}}^{(\text{SCOS})} - R_{\text{macro}}^{(\text{standard})}
     \end{equation}
@@ -211,12 +211,12 @@ We define two distinct estimands:
 \toprule
 \textbf{Corpus Track} & $|\mathcal{I}|$ & $\sum V_i$ & \textbf{Standard (pooled)} & \textbf{SCOS (pooled)} & \textbf{Standard (macro)} & \textbf{SCOS (macro)} & \textbf{Pooled Gain ($\Delta_{\text{micro}}$)} & \textbf{Macro Gain ($\Delta_{\text{macro}}$)} \\
 \midrule
-Development Track & 8 & 24 & 16.7\% (4/24) & \textbf{66.7\%} (16/24) & 15.0\% & \textbf{60.4\%} & \textbf{+50.0 pp} & \textbf{+45.4 pp} \\
+Development Track & 8 & 25 & 16.0\% (4/25) & \textbf{64.0\%} (16/25) & 15.0\% & \textbf{60.4\%} & \textbf{+48.0 pp} & \textbf{+45.4 pp} \\
 Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & 0.0\% & \textbf{61.1\%} & \textbf{+61.1 pp} & \textbf{+61.1 pp} \\
 \bottomrule
 \end{tabular}
 }
-\caption{Completed offline mutation benchmark: Standard structural data quality suites (e.g., standard dbt unique/not\_null and schema linters) allow $\approx 83\text{--}100\%$ of semantic defects to survive silently. SCOS AST invariant validation catches $61.1\%$ of injected semantic mutations (+61.1 percentage points over structural checks on the frozen holdout split under both pooled and macro aggregations).}
+\caption{Completed offline mutation benchmark: Standard structural data quality suites (e.g., standard dbt unique/not\_null and schema linters) allow $\approx 84\text{--}100\%$ of semantic defects to survive silently. On the frozen holdout corpus, SCOS caught 11 of 18 valid executable semantic defects, while the specified standard structural baseline caught 0 of 18; the pooled difference was 61.1 percentage points.}
 \label{tab:mutation_results}
 \end{table}
 
@@ -236,7 +236,7 @@ Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & 0.0\% &
 \texttt{net\_revenue} & Dev & 5 & 1 & 5 & 20.0\% & 100.0\% \\
 \texttt{sla\_compliance\_rate} & Dev & 3 & 0 & 2 & 0.0\% & 66.7\% \\
 \midrule
-\textit{Dev Track Totals / Averages} & \textit{Dev} & \textit{24} & \textit{4} & \textit{16} & \textit{15.0\% (macro)} & \textit{60.4\% (macro)} \\
+\textit{Dev Track Totals / Averages} & \textit{Dev} & \textit{25} & \textit{4} & \textit{16} & \textit{15.0\% (macro)} & \textit{60.4\% (macro)} \\
 \midrule
 \texttt{ad\_campaign\_roas} & Holdout & 3 & 0 & 1 & 0.0\% & 33.3\% \\
 \texttt{b2b\_saas\_arr} & Holdout & 3 & 0 & 3 & 0.0\% & 100.0\% \\
