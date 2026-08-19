@@ -1,0 +1,17 @@
+{
+  "blind_baseline": {},
+  "governed_mcp": {
+    "total_scenarios": 4,
+    "execution_success": 0.0,
+    "contract_compliance": 0.25,
+    "result_correctness": 0.0,
+    "unsafe_query_rate": 0.0,
+    "abstention_rate": 0.25,
+    "mean_tool_calls": 1.75,
+    "p95_latency_ms": 1.1,
+    "mean_estimated_cost": 0.01
+  },
+  "semantic_lift": 0.25,
+  "net_governance_benefit": -0.0551,
+  "policy_version": "1.0.0"
+}

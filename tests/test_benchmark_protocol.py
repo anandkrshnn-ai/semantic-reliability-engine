@@ -167,3 +167,28 @@ def test_trajectory_export_and_replay_engine(tmp_path, benchmark_db, contract_re
     assert "scorecard" in replay_res
     assert replay_res["scorecard"]["governed_mcp"]["contract_compliance"] == 1.0
 
+
+def test_live_governed_adapter_and_cli(contract_registry):
+    from semantic_reliability.benchmark.adapters import LiveGovernedAgentAdapter
+    from semantic_reliability.benchmark.protocol import FrozenProtocolConfig
+    from semantic_reliability.mcp.handlers import ScosMcpHandlers
+    from click.testing import CliRunner
+    from semantic_reliability.cli import main
+
+    handlers = ScosMcpHandlers(registry=contract_registry)
+    cfg = FrozenProtocolConfig(model_id="test-live-model")
+    adapter = LiveGovernedAgentAdapter(config=cfg, mcp_handlers=handlers)
+
+    scen = SCENARIOS[0]
+    traj = adapter.run(scen)
+    assert traj.agent_type == "governed"
+    assert len(traj.tool_calls) >= 1
+    assert traj.tool_calls[0].tool == "scos_get_contract"
+
+    # Test CLI execution
+    runner = CliRunner()
+    res = runner.invoke(main, ["benchmark-live", "--output", "scorecard_test.json"])
+    assert res.exit_code == 0
+    assert "Benchmark live run complete" in res.output
+
+

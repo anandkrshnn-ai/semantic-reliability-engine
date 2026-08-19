@@ -846,8 +846,64 @@ def benchmark_replay(trajectories, contracts, output):
         click.echo(f"Replay report written to {output}")
 
 
+@main.command(name="benchmark-live")
+@click.option("--contracts", default="benchmark_corpus", help="Path to SCOS contracts directory")
+@click.option("--output", default="benchmark_scorecard.json", help="Path for output scorecard JSON")
+@click.option("--model", default="mock-governed-live", help="Model identifier")
+def benchmark_live(contracts, output, model):
+    """Run live agent benchmark against SCOS MCP handlers and frozen scenarios."""
+    import duckdb
+    from semantic_reliability.benchmark.protocol import FrozenProtocolConfig, NetGovernancePolicy
+    from semantic_reliability.benchmark.scenarios import SCENARIOS
+    from semantic_reliability.benchmark.adapters import LiveGovernedAgentAdapter
+    from semantic_reliability.benchmark.oracle import OracleValidator
+    from semantic_reliability.benchmark.evaluator import BenchmarkEvaluator
+    from semantic_reliability.mcp.handlers import ScosMcpHandlers
+    from semantic_reliability.firewall.engine import ContractRegistry
+    from semantic_reliability.compiler.compiler import MetricCompiler
+
+    registry = ContractRegistry()
+    c_path = Path(contracts)
+    if c_path.exists():
+        for y_path in c_path.rglob("*.yaml"):
+            try:
+                comp = MetricCompiler.from_yaml_file(y_path)
+                registry.register(comp.definition)
+            except Exception:
+                pass
+
+    handlers = ScosMcpHandlers(registry=registry)
+    cfg = FrozenProtocolConfig(model_id=model)
+    adapter = LiveGovernedAgentAdapter(config=cfg, mcp_handlers=handlers)
+    conn = duckdb.connect(":memory:")
+    oracle = OracleValidator(conn=conn, registry=registry)
+    evaluator = BenchmarkEvaluator(policy=NetGovernancePolicy())
+
+    gov_trajectories = []
+    for scenario in SCENARIOS:
+        traj = adapter.run(scenario)
+        if traj.final_sql_raw:
+            eval_res = oracle.evaluate_agent_sql(traj.final_sql_raw, scenario)
+            traj.execution_success = eval_res["execution_success"]
+            traj.contract_compliant = eval_res["contract_compliant"]
+            traj.result_correct = eval_res["result_correct"]
+        gov_trajectories.append(traj)
+
+    # Calculate scorecard
+    scorecard = evaluator.compute_scorecard([], gov_trajectories)
+
+    out_p = Path(output)
+    out_p.parent.mkdir(parents=True, exist_ok=True)
+    out_p.write_text(json.dumps(scorecard, indent=2), encoding="utf-8")
+
+    click.echo(f"✅ Benchmark live run complete. Evaluated {len(gov_trajectories)} scenarios.")
+    click.echo(f"Scorecard written to {output}")
+    click.echo(f"Governed Compliance: {scorecard.get('governed_mcp', {}).get('contract_compliance', 0.0) * 100:.1f}%")
+
+
 if __name__ == "__main__":
     main()
+
 
 
 
