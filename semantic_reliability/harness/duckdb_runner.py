@@ -48,6 +48,10 @@ class AssertionBenchmarkReport(BaseModel):
     surviving_defect_summaries: List[str] = Field(default_factory=list)
     evaluations: List[AssertionAwareExecutionDiff]
 
+    @property
+    def unexecutable_mutations_count(self) -> int:
+        return self.total_mutations_generated - self.executable_mutations_count
+
 
 class DuckDBFixtureRunner:
     """Executes baseline vs mutated SQL queries inside in-memory DuckDB and evaluates assertion suites."""

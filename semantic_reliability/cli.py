@@ -286,9 +286,10 @@ def benchmark(sql, assertions, compare, dialect, report):
 @main.command(name="benchmark-corpus")
 @click.option("--corpus", type=click.Path(exists=True), default="benchmark_corpus", help="Path to benchmark corpus directory")
 @click.option("--split", type=click.Choice(["all", "dev", "holdout"]), default="all", help="Corpus track to evaluate")
+@click.option("--error-analysis", is_flag=True, default=False, help="Display surviving defect root-cause error analysis")
 @click.option("--json-out", type=click.Path(), default=None, help="Machine-readable JSON output path")
 @click.option("--report", type=click.Path(), default=None, help="Markdown report output path")
-def benchmark_corpus(corpus, split, json_out, report):
+def benchmark_corpus(corpus, split, error_analysis, json_out, report):
     """Execute multi-model cross-evaluation across Development and Frozen Holdout benchmark tracks."""
     corpus_p = Path(corpus)
 
@@ -296,6 +297,11 @@ def benchmark_corpus(corpus, split, json_out, report):
     from semantic_reliability.harness.fixture_adequacy import FixtureAdequacyChecker
     from semantic_reliability.compiler.coverage import SemanticCoverageCalculator
     from semantic_reliability.harness.validity import BenchmarkValidityEvaluator
+    from semantic_reliability.harness.protocol_verifier import ProtocolVerifier
+    from semantic_reliability.harness.error_analysis import SurvivingDefectTaxonomy
+
+    proto_res = ProtocolVerifier.verify_holdout_protocol()
+    proto_badge = f"[{'bold green' if proto_res.integrity_status == 'VERIFIED' else 'bold yellow'}]{proto_res.integrity_status}[/]"
 
     tracks = []
     if split in ("dev", "all") and (corpus_p / "dev").exists():
@@ -310,6 +316,7 @@ def benchmark_corpus(corpus, split, json_out, report):
     console.print(Panel(
         f"[bold cyan]Corpus Root:[/bold cyan] {corpus_p}\n"
         f"[bold cyan]Track Selection:[/bold cyan] {split.upper()}\n"
+        f"[bold cyan]Freeze Integrity:[/bold cyan] {proto_badge} ({proto_res.notes})\n"
         f"[bold cyan]Scientific Policy:[/bold cyan] Validity Policy v1.0 (OASIS Analytics Standard)",
         title="[bold yellow]🏆 Multi-Model Semantic Mutation Benchmark & Scientific Validity[/bold yellow]"
     ))
@@ -440,6 +447,28 @@ def benchmark_corpus(corpus, split, json_out, report):
         console.print(table)
         console.print()
 
+    if error_analysis:
+        ea_table = Table(title="🔍 Holdout Surviving Defect Root-Cause Taxonomy & Remediation", show_header=True, header_style="bold yellow")
+        ea_table.add_column("Mutation ID", width=14)
+        ea_table.add_column("Model", width=22)
+        ea_table.add_column("Operator", width=16)
+        ea_table.add_column("Root Cause Category", width=20)
+        ea_table.add_column("Severity", width=10)
+        ea_table.add_column("Recommended Remediation", width=36)
+
+        for d in SurvivingDefectTaxonomy.get_defect_analysis():
+            sev_color = "red" if d.severity.value in ("CRITICAL", "HIGH") else "yellow"
+            ea_table.add_row(
+                d.mutation_id,
+                d.model.replace("_", " ").title(),
+                d.operator,
+                f"[cyan]{d.root_cause_category.value}[/cyan]\n[dim]{d.root_cause_code}[/dim]",
+                f"[{sev_color}]{d.severity.value}[/]",
+                d.recommended_assertion,
+            )
+        console.print(ea_table)
+        console.print()
+
     if json_out:
         Path(json_out).write_text(json.dumps(matrix_rows, indent=2), encoding="utf-8")
         console.print(f"[bold green]Saved machine-readable JSON results to:[/bold green] {json_out}")
@@ -455,6 +484,60 @@ def benchmark_corpus(corpus, split, json_out, report):
             lines.append(f"| {r['track']} | {r['model']} | {r['valid_defects']} | {r['standard_catch_pct']:.1f}% | {r['semantic_catch_pct']:.1f}% | {gain} | {r['contract_coverage_pct']:.0f}% | {r['fixture_adequacy_pct']:.0f}% | {r['validity']} ({r['confidence']}) |")
         Path(report).write_text("\n".join(lines), encoding="utf-8")
         console.print(f"[bold green]Saved Markdown report to:[/bold green] {report}\n")
+
+
+@main.command(name="evaluate-agent")
+@click.option("--sql", type=click.Path(exists=True), required=True, help="Path to agent-generated SQL file")
+@click.option("--contract", type=click.Path(exists=True), required=True, help="Path to semantic metric contract YAML")
+@click.option("--fixture", type=click.Path(exists=True), default=None, help="Path to test fixture CSV")
+@click.option("--assertions", type=click.Path(exists=True), default=None, help="Path to semantic assertions YAML")
+def evaluate_agent(sql, contract, fixture, assertions):
+    """Evaluate agent-generated SQL against declared business semantic contracts and assertion test suites."""
+    from semantic_reliability.evaluation.agent_eval import AgentSQLEvaluator
+    from semantic_reliability.compiler.compiler import MetricCompiler
+    from semantic_reliability.assertions.registry import AssertionSuite
+
+    sql_text = Path(sql).read_text(encoding="utf-8")
+    compiler = MetricCompiler.from_yaml_file(contract)
+    metric_def = compiler.definition
+
+    fixtures = {Path(fixture).stem: fixture} if fixture else None
+    suite = AssertionSuite.from_yaml_file(assertions) if assertions else None
+
+    report = AgentSQLEvaluator.evaluate(
+        candidate_sql=sql_text,
+        metric_def=metric_def,
+        fixtures=fixtures,
+        assertion_suite=suite,
+    )
+
+    color = "green" if report.verdict == "ACCEPTED_SEMANTICALLY_COMPLIANT" else "red"
+    console.print(Panel(
+        f"[bold]Metric ID:[/bold] {report.metric_id}\n"
+        f"[bold]Verdict:[/bold] [{color}]{report.verdict}[/{color}]\n"
+        f"[bold]Semantic Risk:[/bold] {report.semantic_risk.value}\n"
+        f"[bold]Execution Success:[/bold] {report.execution_success} ({report.row_count} rows)\n"
+        f"[bold]Contract Compliant:[/bold] {report.contract_compliant}",
+        title=f"🤖 [bold yellow]Agentic Analytics SQL Semantic Evaluation[/bold yellow]"
+    ))
+
+    if report.violations:
+        console.print("[bold red]Contract Invariant Violations:[/bold red]")
+        for v in report.violations:
+            console.print(f"  ❌ {v}")
+        console.print()
+
+    if report.assertion_failures:
+        console.print("[bold yellow]Data Assertion Failures:[/bold yellow]")
+        for a in report.assertion_failures:
+            console.print(f"  ⚠️ {a}")
+        console.print()
+
+    if report.unsupported_assumptions:
+        console.print("[bold magenta]Unsupported Agent Assumptions:[/bold magenta]")
+        for ua in report.unsupported_assumptions:
+            console.print(f"  💡 {ua}")
+        console.print()
 
 
 @main.command(name="pr-comment")
