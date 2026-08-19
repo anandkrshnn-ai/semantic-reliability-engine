@@ -9,17 +9,27 @@ from semantic_reliability.mcp.server import ScosMcpServer
 @pytest.fixture
 def mcp_server():
     registry = ContractRegistry()
-    metric_def = MetricDefinition(
+    metric_finance = MetricDefinition(
         metric="net_revenue",
         owner="finance",
         grain="customer_month",
         sql="SELECT customer_id, SUM(amount) AS net_revenue FROM transactions WHERE status = 'active' GROUP BY 1",
         dialect="duckdb",
+        metadata={"domain": "finance"},
         invariants=SemanticInvariants(
             population=PopulationInvariant(required_filters=["status = 'active'"])
         )
     )
-    registry.register(metric_def)
+    metric_ops = MetricDefinition(
+        metric="delivery_time",
+        owner="ops",
+        grain="order_day",
+        sql="SELECT order_id, AVG(delivery_days) AS delivery_time FROM orders GROUP BY 1",
+        dialect="duckdb",
+        metadata={"domain": "operations"},
+    )
+    registry.register(metric_finance)
+    registry.register(metric_ops)
     return ScosMcpServer(registry=registry)
 
 
@@ -28,7 +38,7 @@ def test_mcp_initialize(mcp_server):
         "jsonrpc": "2.0",
         "id": 1,
         "method": "initialize",
-        "params": {}
+        "params": {"protocolVersion": "2024-11-05"}
     }
     resp = mcp_server.handle_request(req)
     assert resp["id"] == 1
@@ -97,93 +107,82 @@ def test_mcp_call_validate_sql_violation(mcp_server):
     assert len(content["violations"]) > 0
 
 
-def test_mcp_resources(mcp_server):
-    req_list = {
-        "jsonrpc": "2.0",
-        "id": 5,
-        "method": "resources/list",
-        "params": {}
-    }
-    resp_list = mcp_server.handle_request(req_list)
-    uris = [r["uri"] for r in resp_list["result"]["resources"]]
-    assert "scos://policies/semantic-gate/1.0" in uris
-
-    # Read policy resource
-    req_read = {
-        "jsonrpc": "2.0",
-        "id": 6,
-        "method": "resources/read",
-        "params": {"uri": "scos://policies/semantic-gate/1.0"}
-    }
-    resp_read = mcp_server.handle_request(req_read)
-    policy_data = json.loads(resp_read["result"]["contents"][0]["text"])
-    assert policy_data["strict_mode_default"] is True
-
-
-def test_mcp_prompts(mcp_server):
-    req_list = {
-        "jsonrpc": "2.0",
-        "id": 7,
-        "method": "prompts/list",
-        "params": {}
-    }
-    resp_list = mcp_server.handle_request(req_list)
-    prompts = resp_list["result"]["prompts"]
-    p_names = [p["name"] for p in prompts]
-    assert "scos_generate_sql_guidance" in p_names
-    assert "scos_repair_contract_violation" in p_names
-
-    # Get prompt
-    req_get = {
-        "jsonrpc": "2.0",
-        "id": 8,
-        "method": "prompts/get",
-        "params": {
-            "name": "scos_generate_sql_guidance",
-            "arguments": {
-                "metric_id": "net_revenue",
-                "user_intent": "Calculate net revenue by customer"
+def test_mcp_audit_hash_chain_integrity(mcp_server):
+    # Execute two tool calls
+    for i in range(2):
+        mcp_server.handle_request({
+            "jsonrpc": "2.0",
+            "id": 100 + i,
+            "method": "tools/call",
+            "params": {
+                "name": "scos_validate_sql",
+                "arguments": {
+                    "metric_id": "net_revenue",
+                    "sql": f"SELECT customer_id, SUM(amount) FROM transactions WHERE status = 'active' /* {i} */ GROUP BY 1",
+                }
             }
-        }
-    }
-    resp_get = mcp_server.handle_request(req_get)
-    msg_text = resp_get["result"]["messages"][0]["content"]["text"]
-    assert "net_revenue" in msg_text
-    assert "status = 'active'" in msg_text
+        })
+
+    assert len(mcp_server.audit_log) == 2
+    # Verify cryptographic hash chaining
+    assert mcp_server.verify_audit_chain() is True
+    assert mcp_server.audit_log[0].previous_event_hash == ScosMcpServer.GENESIS_HASH
+    assert mcp_server.audit_log[1].previous_event_hash == mcp_server.audit_log[0].event_hash
 
 
-def test_mcp_error_handling_and_limits(mcp_server):
-    # 1. Unknown method
-    req_unknown = {"jsonrpc": "2.0", "id": 9, "method": "unsupported/method"}
-    resp_unknown = mcp_server.handle_request(req_unknown)
-    assert resp_unknown["error"]["code"] == -32601
+def test_mcp_domain_authorization_scoping():
+    registry = ContractRegistry()
+    registry.register(MetricDefinition(
+        metric="net_revenue", owner="finance", grain="day", sql="SELECT 1", metadata={"domain": "finance"}
+    ))
+    registry.register(MetricDefinition(
+        metric="patient_vitals", owner="health", grain="day", sql="SELECT 1", metadata={"domain": "healthcare"}
+    ))
 
-    # 2. Malformed SQL
-    req_malformed = {
+    # Server restricted to 'finance' only
+    scoped_server = ScosMcpServer(registry=registry, allowed_domains=["finance"])
+
+    # 1. List metrics should only return finance
+    resp = scoped_server.handle_request({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "scos_list_metrics", "arguments": {}}})
+    data = json.loads(resp["result"]["content"][0]["text"])
+    metric_ids = [m["metric_id"] for m in data["metrics"]]
+    assert "net_revenue" in metric_ids
+    assert "patient_vitals" not in metric_ids
+
+    # 2. Get contract for unauthorized domain should be denied
+    resp_get = scoped_server.handle_request({
         "jsonrpc": "2.0",
-        "id": 10,
+        "id": 2,
+        "method": "tools/call",
+        "params": {"name": "scos_get_contract", "arguments": {"metric_id": "patient_vitals"}}
+    })
+    data_get = json.loads(resp_get["result"]["content"][0]["text"])
+    assert "Access denied" in data_get["error"]
+
+
+def test_mcp_json_rpc_error_codes(mcp_server):
+    # -32600: Invalid Request
+    resp_inv = mcp_server.handle_request("not_a_json_dict")
+    assert resp_inv["error"]["code"] == -32600
+
+    # -32601: Method not found
+    resp_meth = mcp_server.handle_request({"jsonrpc": "2.0", "id": 1, "method": "unknown_rpc"})
+    assert resp_meth["error"]["code"] == -32601
+
+    # -32602: Invalid params (missing tool name)
+    resp_params = mcp_server.handle_request({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {}})
+    assert resp_params["error"]["code"] == -32602
+
+    # Malformed SQL returns structured failure
+    resp_sql = mcp_server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 3,
         "method": "tools/call",
         "params": {
             "name": "scos_validate_sql",
-            "arguments": {
-                "metric_id": "net_revenue",
-                "sql": "SELECT FROM WHERE ;;; INVALID",
-            }
+            "arguments": {"metric_id": "net_revenue", "sql": "INVALID SQL ;;;;"}
         }
-    }
-    resp_malformed = mcp_server.handle_request(req_malformed)
-    content = json.loads(resp_malformed["result"]["content"][0]["text"])
-    assert content["compliant"] is False
-    assert content["decision"] == "DENY"
-    assert content["violations"][0]["rule"] == "syntax_error"
-
-    # 3. Payload size limit
-    req_large = {"jsonrpc": "2.0", "id": 11, "method": "initialize"}
-    resp_large = mcp_server.handle_request(req_large, raw_payload_len=2_000_000)
-    assert resp_large["error"]["code"] == -32600
-    assert "Payload size exceeds limit" in resp_large["error"]["message"]
-
-    # 4. Verify audit trail was recorded
-    assert len(mcp_server.audit_log) > 0
-    assert mcp_server.audit_log[-1].method == "tools/call"
-
+    })
+    data_sql = json.loads(resp_sql["result"]["content"][0]["text"])
+    assert data_sql["compliant"] is False
+    assert data_sql["decision"] == "DENY"

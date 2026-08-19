@@ -1,8 +1,9 @@
-"""Handlers for SCOS MCP Server tools, resources, and prompts."""
+"""Handlers for SCOS MCP Server tools, resources, and prompts with strict authorization."""
 import hashlib
 import time
 from typing import Dict, List, Any, Optional
 import sqlglot
+from sqlglot import exp
 
 from semantic_reliability.compiler.schema import MetricDefinition
 from semantic_reliability.compiler.contracts import SemanticContractValidator
@@ -12,15 +13,24 @@ from .models import (
     McpResourceDefinition,
     McpPromptDefinition,
     McpPromptArgument,
-    SqlValidationResult,
 )
 
 
 class ScosMcpHandlers:
     """Read-only business contract handlers for Model Context Protocol consultation."""
 
-    def __init__(self, registry: ContractRegistry):
+    MAX_SQL_CHARS = 50_000
+    MAX_AST_NODES = 500
+
+    def __init__(self, registry: ContractRegistry, allowed_domains: Optional[List[str]] = None):
         self.registry = registry
+        self.allowed_domains = [d.lower() for d in allowed_domains] if allowed_domains else None
+
+    def _check_domain_authorized(self, metric_def: MetricDefinition) -> bool:
+        if self.allowed_domains is None:
+            return True
+        m_domain = metric_def.metadata.get("domain", metric_def.tags[0] if metric_def.tags else "general").lower()
+        return m_domain in self.allowed_domains
 
     # --- Tool Definitions ---
 
@@ -42,7 +52,8 @@ class ScosMcpHandlers:
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "metric_id": {"type": "string", "description": "Unique identifier / slug of the metric (e.g. net_revenue)."}
+                        "metric_id": {"type": "string", "description": "Unique identifier / slug of the metric (e.g. net_revenue)."},
+                        "domain": {"type": "string", "description": "Target business domain (optional)."}
                     },
                     "required": ["metric_id"],
                 },
@@ -67,7 +78,6 @@ class ScosMcpHandlers:
                     "type": "object",
                     "properties": {
                         "metric_id": {"type": "string", "description": "Target metric identifier."},
-                        "violation_type": {"type": "string", "description": "The type of violation (e.g. required_filter, grain_drift)."},
                         "rule": {"type": "string", "description": "The exact rule or predicate that was violated."}
                     },
                     "required": ["metric_id", "rule"],
@@ -90,11 +100,13 @@ class ScosMcpHandlers:
 
     def call_tool(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         if name == "scos_list_metrics":
-            domain = arguments.get("domain")
+            domain_filter = arguments.get("domain")
             metrics = []
             for m_id, (m_def, v) in self.registry.contracts.items():
+                if not self._check_domain_authorized(m_def):
+                    continue
                 m_domain = m_def.metadata.get("domain", m_def.tags[0] if m_def.tags else "general")
-                if domain and m_domain.lower() != domain.lower():
+                if domain_filter and m_domain.lower() != domain_filter.lower():
                     continue
                 metrics.append({
                     "metric_id": m_id,
@@ -108,14 +120,21 @@ class ScosMcpHandlers:
 
         elif name == "scos_get_contract":
             m_id = arguments.get("metric_id")
+            if not m_id:
+                raise ValueError("Missing required argument: 'metric_id'")
+
             try:
                 m_def, v = self.registry.get(m_id)
             except ValueError as e:
                 return {"error": str(e), "found": False}
 
+            if not self._check_domain_authorized(m_def):
+                return {"error": f"Access denied: domain for metric '{m_id}' is outside authorized scope.", "found": False}
+
             return {
                 "metric_id": m_id,
                 "version": v,
+                "domain": m_def.metadata.get("domain", "general"),
                 "owner": m_def.owner,
                 "grain": m_def.grain,
                 "dialect": m_def.dialect,
@@ -131,6 +150,20 @@ class ScosMcpHandlers:
             sql = arguments.get("sql", "")
             dialect = arguments.get("dialect")
 
+            if not m_id or not sql:
+                raise ValueError("Missing required arguments: 'metric_id' and 'sql' are required.")
+
+            if len(sql) > self.MAX_SQL_CHARS:
+                return {
+                    "metric_id": m_id,
+                    "compliant": False,
+                    "decision": "DENY",
+                    "violations": [{"rule": "payload_limit", "details": f"SQL length exceeds limit of {self.MAX_SQL_CHARS} chars", "severity": "CRITICAL"}],
+                    "execution_performed": False,
+                    "sql_sha256": hashlib.sha256(sql[:1000].encode()).hexdigest(),
+                    "latency_ms": 0.0,
+                }
+
             sql_hash = hashlib.sha256(sql.strip().encode("utf-8")).hexdigest()
 
             try:
@@ -138,9 +171,36 @@ class ScosMcpHandlers:
             except ValueError as e:
                 return {"error": str(e), "compliant": False, "decision": "DENY"}
 
-            # Parse check
+            if not self._check_domain_authorized(m_def):
+                return {"error": f"Access denied: domain for metric '{m_id}' is outside authorized scope.", "compliant": False, "decision": "DENY"}
+
+            # Parse check & AST node count check
             try:
-                sqlglot.parse_one(sql, read=dialect or m_def.dialect or "duckdb")
+                ast = sqlglot.parse_one(sql, read=dialect or m_def.dialect or "duckdb")
+                if not ast or (not isinstance(ast, exp.Select) and not ast.find(exp.Select)):
+                    return {
+                        "metric_id": m_id,
+                        "contract_version": v,
+                        "compliant": False,
+                        "decision": "DENY",
+                        "violations": [{"rule": "syntax_error", "details": "Query must be a valid SELECT statement.", "severity": "CRITICAL"}],
+                        "execution_performed": False,
+                        "sql_sha256": sql_hash,
+                        "latency_ms": round((time.perf_counter() - t0) * 1000.0, 2),
+                    }
+
+                node_count = sum(1 for _ in ast.walk())
+                if node_count > self.MAX_AST_NODES:
+                    return {
+                        "metric_id": m_id,
+                        "contract_version": v,
+                        "compliant": False,
+                        "decision": "DENY",
+                        "violations": [{"rule": "complexity_limit", "details": f"AST node count ({node_count}) exceeds limit of {self.MAX_AST_NODES}", "severity": "CRITICAL"}],
+                        "execution_performed": False,
+                        "sql_sha256": sql_hash,
+                        "latency_ms": round((time.perf_counter() - t0) * 1000.0, 2),
+                    }
             except Exception as pe:
                 return {
                     "metric_id": m_id,
@@ -169,6 +229,7 @@ class ScosMcpHandlers:
             return {
                 "metric_id": m_id,
                 "contract_version": v,
+                "domain": m_def.metadata.get("domain", "general"),
                 "compliant": eval_res.passed,
                 "decision": decision,
                 "violations": violations,
@@ -181,10 +242,16 @@ class ScosMcpHandlers:
         elif name == "scos_explain_violation":
             m_id = arguments.get("metric_id")
             rule = arguments.get("rule", "")
+            if not m_id or not rule:
+                raise ValueError("Missing required arguments: 'metric_id' and 'rule' are required.")
+
             try:
                 m_def, v = self.registry.get(m_id)
             except ValueError as e:
                 return {"error": str(e)}
+
+            if not self._check_domain_authorized(m_def):
+                return {"error": f"Access denied: domain for metric '{m_id}' is outside authorized scope."}
 
             return {
                 "metric_id": m_id,
@@ -196,21 +263,28 @@ class ScosMcpHandlers:
 
         elif name == "scos_get_probe_status":
             m_id = arguments.get("metric_id")
+            if not m_id:
+                raise ValueError("Missing required argument: 'metric_id'")
+
             try:
                 m_def, v = self.registry.get(m_id)
             except ValueError as e:
                 return {"error": str(e)}
 
+            if not self._check_domain_authorized(m_def):
+                return {"error": f"Access denied: domain for metric '{m_id}' is outside authorized scope."}
+
             probes = m_def.probes.model_dump() if hasattr(m_def, "probes") and m_def.probes else {}
             return {
                 "metric_id": m_id,
                 "contract_version": v,
+                "domain": m_def.metadata.get("domain", "general"),
                 "status": "HEALTHY",
                 "active_probes": probes,
                 "last_evaluated_utc": time.time(),
             }
 
-        raise ValueError(f"Unknown MCP tool: {name}")
+        raise ValueError(f"Unknown MCP tool: '{name}'")
 
     # --- Resources ---
 
@@ -223,6 +297,8 @@ class ScosMcpHandlers:
             )
         ]
         for m_id, (m_def, v) in self.registry.contracts.items():
+            if not self._check_domain_authorized(m_def):
+                continue
             domain = m_def.metadata.get("domain", "general")
             res.append(McpResourceDefinition(
                 uri=f"scos://contracts/{domain}/{m_id}/{v}",
@@ -255,6 +331,9 @@ class ScosMcpHandlers:
                     m_def, v = self.registry.get(m_id)
                 except ValueError as e:
                     return {"error": str(e)}
+
+                if not self._check_domain_authorized(m_def):
+                    return {"error": f"Access denied: resource '{uri}' is outside authorized domain scope."}
 
                 if is_invariants_only:
                     return {
@@ -298,6 +377,9 @@ class ScosMcpHandlers:
         if name == "scos_generate_sql_guidance":
             m_id = arguments.get("metric_id", "")
             intent = arguments.get("user_intent", "")
+            if not m_id:
+                raise ValueError("Missing required prompt argument: 'metric_id'")
+
             try:
                 m_def, v = self.registry.get(m_id)
                 invariants = m_def.invariants.model_dump() if m_def.invariants else {}
@@ -323,4 +405,4 @@ class ScosMcpHandlers:
                 f"Please regenerate the SQL query ensuring all required predicates and deductions are strictly satisfied."
             )
 
-        raise ValueError(f"Unknown MCP prompt: {name}")
+        raise ValueError(f"Unknown MCP prompt: '{name}'")
