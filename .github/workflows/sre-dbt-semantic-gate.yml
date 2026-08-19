@@ -1,0 +1,71 @@
+name: SRE Semantic Gate
+
+on:
+  pull_request:
+    paths:
+      - 'models/**/*.sql'
+      - 'contracts/**/*.yaml'
+      - 'dbt_project.yml'
+
+permissions:
+  contents: read
+  security-events: write # Required for SARIF upload to GitHub Advanced Security
+  pull-requests: write
+
+jobs:
+  semantic-gate:
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY_PATH }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dbt and SRE
+        run: |
+          pip install dbt-bigquery
+          pip install semantic-reliability-engine
+
+      - name: Configure dbt Profile
+        run: |
+          mkdir -p ~/.dbt
+          echo "${{ secrets.DBT_PROFILES_YML }}" > ~/.dbt/profiles.yml
+
+      - name: Compile dbt Manifest
+        run: dbt compile --target prod
+
+      - name: Identify Changed Models
+        id: changed-models
+        run: |
+          CHANGED_FILES=$(git diff --name-only origin/main HEAD | grep '\.sql$' || true)
+          MODELS=$(echo "$CHANGED_FILES" | xargs -n 1 basename 2>/dev/null | sed 's/\.sql$//' | tr '\n' ' ')
+          echo "models=$MODELS" >> $GITHUB_OUTPUT
+
+      - name: Run SRE Semantic Checks
+        if: steps.changed-models.outputs.models != ''
+        run: |
+          for MODEL in ${{ steps.changed-models.outputs.models }}; do
+            CONTRACT="contracts/${MODEL}.yaml"
+            if [ -f "$CONTRACT" ]; then
+              echo "Checking $MODEL against $CONTRACT..."
+              sre dbt-check \
+                --manifest target/manifest.json \
+                --model $MODEL \
+                --contract $CONTRACT \
+                --fail-on critical \
+                --output-sarif sre-${MODEL}.sarif
+            fi
+          done
+
+      - name: Upload SARIF to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: '.'
+          category: 'semantic-reliability'

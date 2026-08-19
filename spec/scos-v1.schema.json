@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://semantic-reliability.dev/schemas/scos-v1.schema.json",
+  "title": "Semantic Contract Open Standard (SCOS) v1.0.0",
+  "description": "Standard declarative schema for executable business metric contracts, semantic invariants, and runtime observability probes.",
+  "type": "object",
+  "required": ["scos_version", "metric", "owner", "grain", "sql"],
+  "properties": {
+    "scos_version": {
+      "type": "string",
+      "enum": ["1.0.0"],
+      "description": "The specification version of the SCOS standard."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^urn:scos:[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+$",
+      "description": "Canonical URN identifier for cross-system contract registry resolution (e.g. urn:scos:finance:net_revenue)."
+    },
+    "metric": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_]+$",
+      "description": "Unique identifier / slug for the metric."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "default": "1.0.0",
+      "description": "SemVer version of the metric contract."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the metric's business purpose."
+    },
+    "owner": {
+      "type": "string",
+      "description": "Team, domain, or email responsible for the business metric definition."
+    },
+    "domain": {
+      "type": "string",
+      "description": "Business domain (e.g. finance, operations, marketing, healthcare)."
+    },
+    "grain": {
+      "type": "string",
+      "description": "Entity and temporal granularity of the metric calculation (e.g. customer_month, transaction_day)."
+    },
+    "dialect": {
+      "type": "string",
+      "enum": ["snowflake", "bigquery", "postgres", "duckdb", "redshift", "databricks"],
+      "default": "duckdb",
+      "description": "SQL dialect used for compilation and AST parsing."
+    },
+    "sql": {
+      "type": "string",
+      "description": "The canonical ground-truth SQL query representing the metric calculation."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Categorical tags for filtering and governance."
+    },
+    "invariants": {
+      "type": "object",
+      "description": "Formal structural and semantic invariant rules governing query AST validity.",
+      "properties": {
+        "population": {
+          "type": "object",
+          "properties": {
+            "required_filters": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "SQL predicate expressions that MUST be present in the WHERE clause."
+            },
+            "forbidden_filters": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "SQL predicate expressions that MUST NOT be present in the WHERE clause."
+            }
+          }
+        },
+        "temporal": {
+          "type": "object",
+          "properties": {
+            "timezone": {
+              "type": "string",
+              "default": "UTC",
+              "description": "Expected timezone for temporal aggregations and partition boundaries."
+            },
+            "period_grain": {
+              "type": "string",
+              "description": "Required time window partition (e.g. month, day, quarter)."
+            }
+          }
+        },
+        "aggregation": {
+          "type": "object",
+          "properties": {
+            "required_aggregations": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Aggregation functions that must enclose specified measure expressions."
+            }
+          }
+        },
+        "deduction": {
+          "type": "object",
+          "properties": {
+            "required_subtractions": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Components that must be subtracted from the gross sum (e.g. discounts, refunds)."
+            }
+          }
+        }
+      }
+    },
+    "probes": {
+      "type": "object",
+      "description": "Runtime statistical reality probes verifying data distribution sanity.",
+      "properties": {
+        "population": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["predicate", "min_rate", "max_rate"],
+            "properties": {
+              "predicate": { "type": "string" },
+              "min_rate": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+              "max_rate": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+            }
+          }
+        },
+        "implications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["antecedent", "consequent", "min_confidence"],
+            "properties": {
+              "antecedent": { "type": "string" },
+              "consequent": { "type": "string" },
+              "min_confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+            }
+          }
+        },
+        "null_drift": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["column", "max_null_rate"],
+            "properties": {
+              "column": { "type": "string" },
+              "max_null_rate": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Arbitrary organizational metadata, cost policies, and tool integrations."
+    }
+  }
+}
