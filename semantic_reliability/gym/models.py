@@ -55,9 +55,9 @@ def assign_difficulty(mutation_type: str, contract: Any) -> Tuple[str, List[str]
 
 
 def compute_evidence_hash(evidence: Dict[str, Any]) -> str:
-    """Generates deterministic SHA256 hash from canonical JSON payload."""
+    """Generates deterministic full 64-character SHA256 hash from canonical JSON payload."""
     payload = json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()[:16]
+    return hashlib.sha256(payload).hexdigest()
 
 
 @dataclass

@@ -87,10 +87,15 @@ def test_gym_split_and_difficulty():
     diff_math, _ = assign_difficulty("MATH_OPERATOR_INVERT", None)
     assert diff_math == "hard"
 
+    # Test full 64-character SHA-256 evidence hash
+    ev_hash = compute_evidence_hash({"test": "data", "num": 123})
+    assert len(ev_hash) == 64
 
-def test_cli_export_and_inspect(test_corpus, tmp_path):
+
+def test_cli_export_and_audit(test_corpus, tmp_path):
     corpus_dir, _ = test_corpus
-    out_file = tmp_path / "train.jsonl"
+    out_file = tmp_path / "train_dpo.jsonl"
+    audit_json = tmp_path / "audit_report.json"
     runner = CliRunner()
 
     res_export = runner.invoke(main, [
@@ -103,15 +108,17 @@ def test_cli_export_and_inspect(test_corpus, tmp_path):
 
     assert res_export.exit_code == 0
     assert "Exported" in res_export.output
-    assert "Rejection Summary" in res_export.output
     assert out_file.exists()
 
-    res_inspect = runner.invoke(main, [
-        "inspect-gym",
+    res_audit = runner.invoke(main, [
+        "audit-gym",
         "--dataset", str(out_file),
-        "--show-evidence"
+        "--output", str(audit_json)
     ])
 
-    assert res_inspect.exit_code == 0
-    assert "Total records" in res_inspect.output
-    assert "Difficulty Distribution" in res_inspect.output
+    assert res_audit.exit_code == 0
+    assert "Audit Status: PASSED" in res_audit.output
+    assert "Mutation Distribution" in res_audit.output
+    assert "Difficulty Distribution" in res_audit.output
+    assert audit_json.exists()
+

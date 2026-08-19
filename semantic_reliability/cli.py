@@ -655,17 +655,57 @@ def export_gym(corpus, split_name, fmt, output):
         console.print(f"  {val}: {count}")
 
 
-@main.command(name="inspect-gym")
+@main.command(name="audit-gym")
 @click.option("--dataset", required=True, type=click.Path(exists=True), help="Path to exported JSONL dataset")
-@click.option("--show-evidence", is_flag=True, default=False, help="Display detailed execution evidence")
-def inspect_gym_cli(dataset, show_evidence):
-    """Inspect and verify records in an exported Semantic Gym dataset."""
-    from semantic_reliability.gym.inspector import inspect_dataset
-    inspect_dataset(dataset, show_evidence)
+@click.option("--output", "json_out", type=click.Path(), default=None, help="Optional JSON audit report output path")
+def audit_gym_cli(dataset, json_out):
+    """Run formal static and statistical audit on exported Semantic Gym dataset."""
+    from semantic_reliability.gym.auditor import audit_gym_dataset
+
+    console.print(f"\n🔍 [bold cyan]Auditing Semantic Gym Dataset:[/bold cyan] [bold]{Path(dataset).name}[/bold]...\n")
+    report = audit_gym_dataset(dataset)
+
+    status_color = "bold green" if report.is_clean else "bold red"
+    status_text = "PASSED (CLEAN)" if report.is_clean else "FAILED (ANOMALIES DETECTED)"
+
+    console.print(f"[{status_color}]Audit Status: {status_text}[/{status_color}]\n")
+    console.print(f"[bold]Integrity & Leakage Checks:[/bold]")
+    console.print(f"  Total records: {report.total_records}")
+    console.print(f"  Duplicate example IDs: {report.duplicate_example_ids}")
+    console.print(f"  Duplicate evidence hashes: {report.duplicate_evidence_hashes}")
+    console.print(f"  Conflicting preference labels: {report.conflicting_preference_labels}")
+    console.print(f"  Chosen/rejected identical: {report.chosen_rejected_identical}")
+    console.print(f"  Missing evidence: {report.missing_evidence}")
+    console.print(f"  Mutation-family leakage: {report.mutation_family_leakage}")
+    console.print(f"  Metric-family leakage: {report.metric_family_leakage}")
+    console.print(f"  Domain leakage: {report.domain_leakage}")
+
+    console.print(f"\n[bold]Mutation Distribution:[/bold]")
+    for k, v in report.mutation_distribution.items():
+        console.print(f"  {k}: {v:.1f}%")
+
+    console.print(f"\n[bold]Difficulty Distribution:[/bold]")
+    for k, v in report.difficulty_distribution.items():
+        console.print(f"  {k}: {v:.1f}%")
+
+    console.print(f"\n[bold]Split Distribution:[/bold]")
+    for k, v in report.split_distribution.items():
+        console.print(f"  {k}: {v:.1f}%")
+
+    if json_out:
+        out_p = Path(json_out)
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(json.dumps(report.model_dump(), indent=2), encoding="utf-8")
+        console.print(f"\n[green]Audit report saved to:[/green] [bold]{json_out}[/bold]")
+
+    console.print()
+    if not report.is_clean:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
+
 
 
 

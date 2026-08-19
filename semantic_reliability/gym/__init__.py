@@ -9,6 +9,7 @@ from .models import (
 from .generator import GymGenerator, SemanticGymGenerator
 from .formatters import DPOFormatter, SFTFormatter, RLHFFormatter, get_formatter
 from .inspector import inspect_dataset
+from .auditor import GymAuditReport, audit_gym_dataset
 
 __all__ = [
     "GymExample",
@@ -24,4 +25,6 @@ __all__ = [
     "RLHFFormatter",
     "get_formatter",
     "inspect_dataset",
+    "GymAuditReport",
+    "audit_gym_dataset",
 ]
