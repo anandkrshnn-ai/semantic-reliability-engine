@@ -30,10 +30,10 @@
     "ceiling_reached_rate": 0.0,
     "mean_tool_calls": 1.4,
     "p50_latency_ms": 0.02,
-    "p95_latency_ms": 1.55,
+    "p95_latency_ms": 1.2,
     "mean_estimated_cost_usd": 0.01
   },
   "semantic_lift": 0.4,
-  "net_governance_benefit": 0.0348,
+  "net_governance_benefit": 0.0349,
   "policy_version": "1.0.0"
 }

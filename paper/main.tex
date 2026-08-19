@@ -189,33 +189,67 @@ To enable zero-compute regression testing, SCOS-MCP records full agent execution
 \subsection{Completed Holdout Mutation Analysis}
 Prior to live model evaluation, we validated the SCOS invariant compiler on our development and frozen holdout corpora using denominator-precise AST chaos mutations across 5 mutation operators (Filter Drop, Boundary Shift, Aggregation Swap, Coalesce Bypass, Grain Drop). 
 
-Let $M$ denote the total number of metric models evaluated in a track, let $V_i$ denote the number of valid injected semantic mutations for model $i$, and let $D_i$ denote the number of mutations detected by a testing suite. We define the eligible model set as $\mathcal{I} = \{i \in \{1, \dots, M\} : V_i > 0\}$. In our benchmark, all models meet denominator eligibility: $|\mathcal{I}_{\text{dev}}| = 8$ ($V_{\text{dev}} = 24$) and $|\mathcal{I}_{\text{holdout}}| = 6$ ($V_{\text{holdout}} = 18$).
+Let $M$ denote the total number of metric models in a track, let $V_i$ denote the number of valid injected semantic mutations for model $i$, and let $C_i^{(m)}$ denote the number of mutations detected by testing method $m \in \{\text{standard}, \text{SCOS}\}$. We define the eligible model set as $\mathcal{I} = \{i \in \{1, \dots, M\} : V_i > 0\}$. In our benchmark, all models meet denominator eligibility: $|\mathcal{I}_{\text{dev}}| = 8$ ($V_{\text{dev}} = 24$) and $|\mathcal{I}_{\text{holdout}}| = 6$ ($V_{\text{holdout}} = 18$).
 
 We define two distinct estimands:
 \begin{enumerate}[noitemsep]
     \item \textbf{Pooled (Micro) Catch Rate:} Primary aggregated metric over all valid mutations:
     \begin{equation}
-    \text{Rate}_{\text{micro}} = \frac{\sum_{i \in \mathcal{I}} D_i}{\sum_{i \in \mathcal{I}} V_i}, \qquad \Delta_{\text{micro}} = \text{Rate}_{\text{micro}}^{\text{SCOS}} - \text{Rate}_{\text{micro}}^{\text{Standard}}
+    R_{\text{micro}}^{(m)} = \frac{\sum_{i \in \mathcal{I}} C_i^{(m)}}{\sum_{i \in \mathcal{I}} V_i}, \qquad \Delta_{\text{micro}} = R_{\text{micro}}^{(\text{SCOS})} - R_{\text{micro}}^{(\text{standard})}
     \end{equation}
     \item \textbf{Macro-Averaged Catch Rate:} Unweighted mean across individual models to evaluate dispersion:
     \begin{equation}
-    \text{Rate}_{\text{macro}} = \frac{1}{|\mathcal{I}|} \sum_{i \in \mathcal{I}} \frac{D_i}{V_i}, \qquad \Delta_{\text{macro}} = \text{Rate}_{\text{macro}}^{\text{SCOS}} - \text{Rate}_{\text{macro}}^{\text{Standard}}
+    R_{\text{macro}}^{(m)} = \frac{1}{|\mathcal{I}|} \sum_{i \in \mathcal{I}} \frac{C_i^{(m)}}{V_i}, \qquad \Delta_{\text{macro}} = R_{\text{macro}}^{(\text{SCOS})} - R_{\text{macro}}^{(\text{standard})}
     \end{equation}
 \end{enumerate}
 
 \begin{table}[ht!]
 \centering
 \small
-\begin{tabular}{lcccccc}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccccccc}
 \toprule
-\textbf{Corpus Track} & $|\mathcal{I}|$ & $\sum V_i$ & \textbf{Structural (pooled)} & \textbf{SCOS Catch (pooled)} & \textbf{Gain (pooled, pp)} & \textbf{Gain (macro, pp)} \\
+\textbf{Corpus Track} & $|\mathcal{I}|$ & $\sum V_i$ & \textbf{Standard (pooled)} & \textbf{SCOS (pooled)} & \textbf{Standard (macro)} & \textbf{SCOS (macro)} & \textbf{Pooled Gain ($\Delta_{\text{micro}}$)} & \textbf{Macro Gain ($\Delta_{\text{macro}}$)} \\
 \midrule
-Development Track & 8 & 24 & 16.7\% (4/24) & \textbf{66.7\%} (16/24) & \textbf{+50.0 pp} & +45.4 pp (60.4\% vs 15.0\%) \\
-Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & \textbf{+61.1 pp} & +61.1 pp (61.1\% vs 0.0\%) \\
+Development Track & 8 & 24 & 16.7\% (4/24) & \textbf{66.7\%} (16/24) & 15.0\% & \textbf{60.4\%} & \textbf{+50.0 pp} & \textbf{+45.4 pp} \\
+Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & 0.0\% & \textbf{61.1\%} & \textbf{+61.1 pp} & \textbf{+61.1 pp} \\
 \bottomrule
 \end{tabular}
+}
 \caption{Completed offline mutation benchmark: Standard structural data quality suites (e.g., standard dbt unique/not\_null and schema linters) allow $\approx 83\text{--}100\%$ of semantic defects to survive silently. SCOS AST invariant validation catches $61.1\%$ of injected semantic mutations (+61.1 percentage points over structural checks on the frozen holdout split under both pooled and macro aggregations).}
 \label{tab:mutation_results}
+\end{table}
+
+\begin{table}[ht!]
+\centering
+\small
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Model ID ($i$)} & \textbf{Track Split} & $V_i$ & $C_i^{(\text{standard})}$ & $C_i^{(\text{SCOS})}$ & \textbf{Standard Rate} & \textbf{SCOS Rate} \\
+\midrule
+\texttt{average\_order\_value} & Dev & 2 & 0 & 1 & 0.0\% & 50.0\% \\
+\texttt{checkout\_conversion\_rate} & Dev & 3 & 1 & 1 & 33.3\% & 33.3\% \\
+\texttt{customer\_churn\_rate} & Dev & 3 & 1 & 3 & 33.3\% & 100.0\% \\
+\texttt{customer\_retention\_rate} & Dev & 3 & 0 & 0 & 0.0\% & 0.0\% \\
+\texttt{inventory\_turnover} & Dev & 3 & 0 & 1 & 0.0\% & 33.3\% \\
+\texttt{monthly\_active\_users} & Dev & 3 & 1 & 3 & 33.3\% & 100.0\% \\
+\texttt{net\_revenue} & Dev & 5 & 1 & 5 & 20.0\% & 100.0\% \\
+\texttt{sla\_compliance\_rate} & Dev & 3 & 0 & 2 & 0.0\% & 66.7\% \\
+\midrule
+\textit{Dev Track Totals / Averages} & \textit{Dev} & \textit{24} & \textit{4} & \textit{16} & \textit{15.0\% (macro)} & \textit{60.4\% (macro)} \\
+\midrule
+\texttt{ad\_campaign\_roas} & Holdout & 3 & 0 & 1 & 0.0\% & 33.3\% \\
+\texttt{b2b\_saas\_arr} & Holdout & 3 & 0 & 3 & 0.0\% & 100.0\% \\
+\texttt{cloud\_compute\_burn\_rate} & Holdout & 4 & 0 & 4 & 0.0\% & 100.0\% \\
+\texttt{fintech\_chargeback\_rate} & Holdout & 2 & 0 & 2 & 0.0\% & 100.0\% \\
+\texttt{hospital\_readmission\_rate} & Holdout & 3 & 0 & 0 & 0.0\% & 0.0\% \\
+\texttt{marketplace\_take\_rate} & Holdout & 3 & 0 & 1 & 0.0\% & 33.3\% \\
+\midrule
+\textit{Holdout Track Totals / Averages} & \textit{Holdout} & \textit{18} & \textit{0} & \textit{11} & \textit{0.0\% (macro)} & \textit{61.1\% (macro)} \\
+\bottomrule
+\end{tabular}
+\caption{Granular per-model audit table across all 14 evaluated metric contracts, documenting exact valid mutation counts, detection frequencies, and individual rates underlying the aggregate benchmark metrics.}
+\label{tab:per_model_audit}
 \end{table}
 
 \subsection{Phase 12.4 Trajectory Evaluation}
