@@ -10,6 +10,7 @@ from .generator import GymGenerator, SemanticGymGenerator
 from .formatters import DPOFormatter, SFTFormatter, RLHFFormatter, get_formatter
 from .inspector import inspect_dataset
 from .auditor import GymAuditReport, audit_gym_dataset
+from .evaluator import BaselineAgentEvaluator, AgentEvalRecord, AgentBenchmarkReport
 
 __all__ = [
     "GymExample",
@@ -27,4 +28,7 @@ __all__ = [
     "inspect_dataset",
     "GymAuditReport",
     "audit_gym_dataset",
+    "BaselineAgentEvaluator",
+    "AgentEvalRecord",
+    "AgentBenchmarkReport",
 ]

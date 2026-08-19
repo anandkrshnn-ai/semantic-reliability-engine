@@ -51,8 +51,8 @@ def test_gym_generator_end_to_end(test_corpus):
     first = examples[0]
     assert first.chosen_sql.startswith("SELECT")
     assert first.rejected_sql.startswith("SELECT")
-    assert first.chosen_evidence["execution"] is True
-    assert first.chosen_evidence["contract_passed"] is True
+    assert first.chosen_evidence["execution_success"] is True
+    assert first.chosen_evidence["contract_compliant"] is True
     assert first.evidence_hash != ""
     assert first.difficulty in ("easy", "medium", "hard")
 
@@ -68,12 +68,12 @@ def test_gym_formatters(test_corpus):
     assert dpo["metadata"]["contract_id"] == "net_revenue"
 
     sft = get_formatter("sft").format(ex)
-    assert "prompt" in sft and "completion" in sft and "semantic_rationale" in sft
+    assert "prompt" in sft and "completion" in sft and "reason_codes" in sft
 
     rlhf = get_formatter("rlhf").format(ex)
-    assert len(rlhf["completions"]) == 2
-    assert rlhf["completions"][0]["reward"] == 1.0
-    assert rlhf["completions"][1]["reward"] == 0.0
+    assert "reward_components" in rlhf
+    assert rlhf["reward_components"]["execution"] == 1.0
+    assert rlhf["reward_policy_version"] == "sre-reward-v1"
 
 
 def test_gym_split_and_difficulty():
@@ -121,4 +121,64 @@ def test_cli_export_and_audit(test_corpus, tmp_path):
     assert "Mutation Distribution" in res_audit.output
     assert "Difficulty Distribution" in res_audit.output
     assert audit_json.exists()
+
+
+def test_baseline_agent_evaluator():
+    from semantic_reliability.firewall.engine import ContractRegistry
+    from semantic_reliability.gym.evaluator import BaselineAgentEvaluator
+
+    metric_def = MetricDefinition(
+        metric="net_revenue",
+        owner="finance",
+        grain="customer_month",
+        sql="SELECT customer_id, SUM(amount) AS net_revenue FROM transactions WHERE status = 'active' GROUP BY customer_id",
+        dialect="duckdb",
+        invariants=SemanticInvariants(
+            population=PopulationInvariant(required_filters=["status = 'active'"])
+        )
+    )
+
+    registry = ContractRegistry()
+    registry.register(metric_def)
+
+    evaluator = BaselineAgentEvaluator(registry=registry, strict_mode=False)
+
+    df = pd.DataFrame({
+        "customer_id": ["c1", "c2"],
+        "status": ["active", "churned"],
+        "amount": [100.0, 50.0]
+    })
+
+    # Candidate 1: Compliant query
+    res_compliant = evaluator.evaluate_candidate(
+        metric_def=metric_def,
+        generated_sql="SELECT customer_id, SUM(amount) AS net_revenue FROM transactions WHERE status = 'active' GROUP BY customer_id",
+        fixture_df=df,
+    )
+    assert res_compliant.execution_success is True
+    assert res_compliant.contract_compliant is True
+    assert res_compliant.result_correct is True
+
+    # Candidate 2: Flawed query (omits status = 'active')
+    res_flawed = evaluator.evaluate_candidate(
+        metric_def=metric_def,
+        generated_sql="SELECT customer_id, SUM(amount) AS net_revenue FROM transactions GROUP BY customer_id",
+        fixture_df=df,
+    )
+    assert res_flawed.execution_success is True
+    assert res_flawed.contract_compliant is False  # Catches semantic failure despite execution success!
+    assert res_flawed.result_correct is False
+
+    # Test full benchmark report aggregation
+    report = evaluator.run_benchmark([
+        {"metric_def": metric_def, "generated_sql": metric_def.sql, "fixture_df": df},
+        {"metric_def": metric_def, "generated_sql": "SELECT customer_id, SUM(amount) AS net_revenue FROM transactions GROUP BY customer_id", "fixture_df": df},
+    ], model_name="GPT-4o-Baseline")
+
+    assert report.total_evaluations == 2
+    assert report.execution_success_rate_pct == 100.0
+    assert report.contract_compliance_rate_pct == 50.0
+    md = report.summary_markdown()
+    assert "Agent Semantic Compliance Benchmark" in md
+
 

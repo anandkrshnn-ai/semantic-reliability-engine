@@ -16,20 +16,27 @@ class DPOFormatter:
                 "difficulty": ex.difficulty,
                 "evidence_hash": ex.evidence_hash,
                 "split": ex.split,
+                "rejection_basis": ex.rejected_evidence.get("rejection_basis", []),
             }
         }
 
 
 class SFTFormatter:
-    """Formats GymExample into SFT instruction-tuning format with reasoning traces."""
+    """Formats GymExample into SFT instruction-tuning format with structured reason codes."""
     def format(self, ex: GymExample) -> Dict[str, Any]:
+        reason_codes = []
+        if ex.chosen_evidence.get("contract_compliant"):
+            reason_codes.append("CONTRACT_COMPLIANT")
+        if ex.chosen_evidence.get("assertions_passed"):
+            reason_codes.append("ASSERTIONS_PASSED")
+
         return {
             "prompt": ex.prompt,
             "completion": ex.chosen_sql,
-            "negative_example": ex.rejected_sql,
-            "semantic_rationale": f"Contract '{ex.contract_id}' requires specific invariants. An invalid formulation would introduce '{ex.mutation_description}'.",
+            "reason_codes": reason_codes,
             "metadata": {
                 "example_id": ex.example_id,
+                "contract_id": ex.contract_id,
                 "difficulty": ex.difficulty,
                 "evidence_hash": ex.evidence_hash,
             }
@@ -37,26 +44,22 @@ class SFTFormatter:
 
 
 class RLHFFormatter:
-    """Formats GymExample into RLHF reward modeling pair with fine-grained scores."""
+    """Formats GymExample into RLHF reward modeling pair with multi-component reward breakdowns."""
     def format(self, ex: GymExample) -> Dict[str, Any]:
         return {
             "prompt": ex.prompt,
-            "completions": [
-                {
-                    "response": ex.chosen_sql,
-                    "reward": 1.0,
-                    "compliant": True,
-                    "evidence": ex.chosen_evidence,
-                },
-                {
-                    "response": ex.rejected_sql,
-                    "reward": 0.0,
-                    "compliant": False,
-                    "evidence": ex.rejected_evidence,
-                }
-            ],
+            "response": ex.chosen_sql,
+            "reward_components": {
+                "execution": 1.0,
+                "contract": 1.0,
+                "assertions": 1.0,
+                "fixture_divergence": 0.0,
+                "cost": None,
+            },
+            "reward_policy_version": "sre-reward-v1",
             "metadata": {
                 "example_id": ex.example_id,
+                "contract_id": ex.contract_id,
                 "difficulty": ex.difficulty,
                 "evidence_hash": ex.evidence_hash,
             }

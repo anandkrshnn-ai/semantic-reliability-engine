@@ -12,6 +12,9 @@ class RejectionReason(str, Enum):
     INSUFFICIENT_FIXTURE_CONTRAST = "insufficient_fixture_contrast"
     INCOMPLETE_CONTRACT = "incomplete_contract"
     REJECTED_NOT_SEMANTICALLY_DIVERGENT = "rejected_not_semantically_divergent"
+    UNRESOLVED_PREFERENCE = "unresolved_preference"  # Diverges on fixture but violates no contract
+    MALFORMED_SQL = "malformed_sql"
+    IDENTICAL_PAIR = "identical_pair"
 
 
 SPLIT_RULES: Dict[str, List[str]] = {

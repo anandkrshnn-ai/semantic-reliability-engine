@@ -24,7 +24,7 @@ logger = logging.getLogger("sre.gym")
 
 
 class GymGenerator:
-    """Consolidated Generator for SRE Semantic Gym Preference Datasets."""
+    """Consolidated Generator for SRE Semantic Gym Preference Datasets with strict scientific gates."""
 
     def __init__(self, corpus_dir: str | Path, policy_version: str = "v1.0.0-phase8.4"):
         self.corpus_dir = Path(corpus_dir)
@@ -98,7 +98,14 @@ class GymGenerator:
                     continue
 
                 mut_sql = mut.mutated_sql.strip()
+
+                # Cosmetic check: ensure mutation actually changed SQL string
+                if mut_sql == contract.sql.strip():
+                    self.rejection_counts[RejectionReason.IDENTICAL_PAIR] += 1
+                    continue
+
                 mut_val: Optional[float] = None
+                result_changed = False
                 variance_pct = 0.0
 
                 if has_fixture:
@@ -114,6 +121,7 @@ class GymGenerator:
                         if baseline_val == mut_val:
                             self.rejection_counts[RejectionReason.EQUIVALENT_ON_FIXTURE] += 1
                             continue
+                        result_changed = True
                         if baseline_val != 0:
                             variance_pct = round(abs(mut_val - baseline_val) / abs(baseline_val) * 100.0, 2)
                         else:
@@ -122,23 +130,40 @@ class GymGenerator:
                 eval_mut = SemanticContractValidator.validate(candidate_sql=mut_sql, metric_def=contract)
                 violations = [f"{v.invariant_category}: {v.invariant_rule}" for v in eval_mut.violations]
 
-                if not violations and variance_pct == 0.0:
+                # --- REJECTION BASIS LOGIC ---
+                rejection_basis = []
+                if violations:
+                    rejection_basis.append("CONTRACT_VIOLATION")
+                if result_changed:
+                    rejection_basis.append("RESULT_DIVERGENCE")
+
+                if not rejection_basis:
                     self.rejection_counts[RejectionReason.REJECTED_NOT_SEMANTICALLY_DIVERGENT] += 1
+                    continue
+
+                # The Critical Gate: Diverges on fixture, but violates no known contract.
+                # This is an ungrounded alternative analysis, not an agreed defect. Exclude from DPO.
+                if rejection_basis == ["RESULT_DIVERGENCE"]:
+                    self.rejection_counts[RejectionReason.UNRESOLVED_PREFERENCE] += 1
                     continue
 
                 difficulty, reasons = assign_difficulty(mut.mutation_type.value, contract)
 
+                # --- UNAMBIGUOUS EVIDENCE SCHEMA ---
                 chosen_evidence = {
-                    "execution": True,
-                    "contract_passed": True,
+                    "execution_success": True,
+                    "contract_compliant": True,
                     "assertions_passed": True,
-                    "violations": [],
+                    "baseline_validated": True,
+                    "result_reference": "baseline",
                 }
                 rejected_evidence = {
-                    "execution": True,
-                    "contract_passed": len(violations) == 0,
+                    "execution_success": True,
+                    "contract_compliant": len(violations) == 0,
                     "assertions_passed": False,
-                    "variance_pct": variance_pct,
+                    "result_changed_vs_chosen": result_changed,
+                    "variance_pct_vs_chosen": variance_pct,
+                    "rejection_basis": rejection_basis,
                     "violations": violations,
                 }
 
@@ -177,5 +202,4 @@ class GymGenerator:
         return examples
 
 
-# Alias for backward compatibility
 SemanticGymGenerator = GymGenerator
