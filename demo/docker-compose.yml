@@ -1,5 +1,10 @@
 version: '3.8'
 
+networks:
+  sre_demo_net:
+    driver: bridge
+    internal: false
+
 services:
   scos-mcp-server:
     build:
@@ -7,8 +12,19 @@ services:
       dockerfile: demo/Dockerfile
     container_name: scos_mcp_server
     command: sre mcp-serve --contracts benchmark_corpus/dev --port 8000
+    networks:
+      - sre_demo_net
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
     environment:
       - PYTHONUNBUFFERED=1
 
@@ -17,8 +33,19 @@ services:
       context: ..
       dockerfile: demo/Dockerfile
     container_name: analytics_agent_demo
+    networks:
+      - sre_demo_net
     depends_on:
       - scos-mcp-server
-    command: python demo/agent.py --server-url http://scos-mcp-server:8000
+    command: python demo/agent.py
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
     environment:
       - PYTHONUNBUFFERED=1

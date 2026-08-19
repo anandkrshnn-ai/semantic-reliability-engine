@@ -1,44 +1,58 @@
 # The Semantic Contract Open Standard (SCOS) Manifesto
 
-> **AI-generated SQL can be executable and still be semantically wrong. SCOS makes business meaning explicit, testable, and discoverable by agents.**
+> **AI-generated SQL can execute successfully and still violate business meaning. SCOS makes business semantics explicit, testable, and discoverable by agents.**
 
 ---
 
 ## 1. The Silent Semantic Failure Problem
 
-In the modern enterprise, Large Language Model (LLM) agents are writing queries against massive cloud data warehouses at superhuman speed. 
+In the modern enterprise, Large Language Model (LLM) agents are writing queries against cloud data warehouses at superhuman speed.
 
-Benchmarks celebrate high execution accuracy and syntactic exact-match scores. But in production, data teams and enterprise leaders face a far more dangerous phenomenon: **The Silent Semantic Failure Gap**.
+Standard benchmarks celebrate high execution rates and syntactic parsing accuracy. However, in production analytics environments, data engineering teams face **the silent semantic failure gap**:
 
 A query can:
-- Parse into a valid SQL abstract syntax tree (AST) with zero errors;
+- Parse into a valid SQL abstract syntax tree (AST) with zero syntax errors;
 - Execute across Snowflake, BigQuery, Databricks, or DuckDB in milliseconds;
-- Return formatted tables and numbers;
+- Return formatted tables and numbers with zero runtime exceptions;
 
-...and yet be **completely wrong about the business**.
+...and yet be **fundamentally wrong about the underlying business metric**.
 
-When an agent calculates *Net Revenue* without deducting customer refunds, when it measures *Monthly Active Users* without filtering out automated bot scripts, or when it aggregates *Churn Rate* over trial accounts, **the database engine does not throw an error**. The query succeeds, the dashboard updates, and executives make six-figure decisions based on flawed numbers.
+When an agent calculates *Net Revenue* without deducting customer refunds, when it measures *Monthly Active Users* without filtering out automated bot scripts, or when it aggregates *Churn Rate* over trial accounts, **the database engine does not throw an error**. The query succeeds, the dashboard updates, and business decisions are made based on flawed numbers.
 
-Traditional data observability linters check table schemas and null counts; they do not check whether the logic inside an autonomous agent's query matches the company's agreed-upon definitions.
+Traditional data observability tools check table schemas and null counts; they do not evaluate whether the analytical logic inside an autonomous agent's query adheres to organizational definitions.
 
 ---
 
-## 2. What is SCOS?
+## 2. How SCOS Differs from Traditional Data Contracts
 
-The **Semantic Contract Open Standard (SCOS)** is an open, vendor-neutral specification for declaring business-semantic invariants directly in code.
+Existing data contract standards (such as ODCS or table-level data contracts) focus primarily on **dataset schemas, types, and producer/consumer SLAs**.
+
+**SCOS is designed specifically for analytical meaning and query-level semantic logic:**
+
+| Dimension | Traditional Data Contracts | SCOS Semantic Contracts |
+| :--- | :--- | :--- |
+| **Primary Scope** | Table schemas, column types, SLA metadata | Query-level mathematical & population invariants |
+| **Enforcement Point** | Data producers / ingestion pipelines | Agent reasoning loop & analytical CI/CD gates |
+| **Validation Mechanism** | Schema comparison & column assertions | Multi-dialect AST normalization & invariant parsing |
+| **Agent Interface** | Static schema documentation | Read-only Model Context Protocol (MCP) server |
+| **Evaluation Model** | Row-count & null checks on tables | Denominator-precise chaos mutation scoring |
+
+---
+
+## 3. The SCOS Architecture
 
 An SCOS contract binds analytical logic to machine-readable rules:
 - **Grain Invariants:** Required group-by dimensions.
 - **Population Invariants:** Mandatory WHERE-clause filters (e.g., `status = 'active'`, `region = 'NA'`).
-- **Aggregation Invariants:** Required positive and negative formula components (e.g., invoices minus refunds).
+- **Aggregation Invariants:** Explicit positive and negative formula components (e.g., invoices minus refunds).
 - **Join Invariants:** Permitted table relationship paths to prevent fan-out multiplication.
-- **Reality Probes:** Automated statistical checks that detect when production data drifts away from real-world assumptions.
+- **Reality Probes:** Statistical telemetry signals that monitor data health for population drift and null anomalies.
 
 ---
 
-## 3. How Agents Use SCOS via MCP
+## 4. Agent Governance via Read-Only MCP
 
-Through the **Model Context Protocol (MCP)**, SCOS provides a read-only governance layer for AI agents:
+Through the **Model Context Protocol (MCP)**, SCOS provides an interactive consultation layer for AI agents:
 
 ```text
 User Prompt
@@ -55,18 +69,17 @@ AI Agent (Claude / GPT / Llama)
             └── Ambiguous?  ──► ABSTAIN ──► Requests Human Clarification
 ```
 
-The SCOS MCP Server:
-- **Executes Zero Warehouse SQL:** Completely read-only with minimal attack surface.
-- **Tamper-Evident Audit Trails:** Every tool invocation is recorded in a SHA-256 cryptographic hash-chain anchored by signed checkpoints.
-- **Zero-Compute Trajectory Replay:** Historical agent runs can be replayed against updated contracts in seconds without spending inference or warehouse budget.
+### Security & Operational Boundaries
+- **Strictly Read-Only:** The SCOS MCP server executes zero warehouse queries and cannot mutate contracts.
+- **Tamper-Evident Audit Trails:** Every tool invocation is recorded in a SHA-256 cryptographic hash-chain.
+- **Zero-Compute Trajectory Replay:** Historical agent trajectories can be replayed against updated contracts in seconds without re-running LLMs or scanning warehouses.
 
 ---
 
-## 4. An Open Standard for the AI-Assisted Enterprise
+## 5. An Open Standard for AI-Assisted Analytics
 
-We believe that semantic truth should not be locked inside proprietary black boxes. By making semantic contracts open, declarative, and discoverable, data engineering teams and AI systems can finally speak the exact same language.
+We believe semantic definitions should be open, declarative, and discoverable. SCOS bridges the gap between data engineering definitions and autonomous AI systems.
 
-Join the open standard:
 - **Specification:** [`spec/SCOS_V1_SPECIFICATION.md`](../spec/SCOS_V1_SPECIFICATION.md)
 - **JSON Schema:** [`spec/scos-v1.schema.json`](../spec/scos-v1.schema.json)
 - **Reference Implementation:** [github.com/semantic-reliability-engine/semantic-reliability-engine](https://github.com/semantic-reliability-engine/semantic-reliability-engine)

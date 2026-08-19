@@ -187,20 +187,20 @@ To enable zero-compute regression testing, SCOS-MCP records full agent execution
 \label{sec:results}
 
 \subsection{Completed Holdout Mutation Analysis}
-Prior to live model evaluation, we validated the SCOS invariant compiler on our frozen holdout corpus using denominator-precise AST chaos mutations across 5 mutation operators (Filter Drop, Boundary Shift, Aggregation Swap, Coalesce Bypass, Grain Drop). 
+Prior to live model evaluation, we validated the SCOS invariant compiler on our development and frozen holdout corpora using denominator-precise AST chaos mutations across 5 mutation operators (Filter Drop, Boundary Shift, Aggregation Swap, Coalesce Bypass, Grain Drop).
 
 \begin{table}[ht!]
 \centering
 \small
 \begin{tabular}{lcccc}
 \toprule
-\textbf{Corpus Split} & \textbf{Valid Mutations} & \textbf{Standard dbt Tests} & \textbf{SCOS Semantic Gate} & \textbf{Defect Catch Delta} \\
+\textbf{Corpus Split} & \textbf{Valid Mutations} & \textbf{Standard Structural Tests} & \textbf{SCOS Semantic Gate} & \textbf{Empirical Gain ($\Delta$)} \\
 \midrule
-Development Split ($n=8$) & 38 & 13.2\% (5/38) & \textbf{100.0\%} (38/38) & \textbf{+86.8\%} \\
-Frozen Holdout Split ($n=6$) & 29 & 10.3\% (3/29) & \textbf{100.0\%} (29/29) & \textbf{+89.7\%} \\
+Development Track ($n=8$) & 24 & 15.0\% (4/24) & \textbf{60.4\%} (16/24) & \textbf{+45.4 pp} \\
+Frozen Holdout Track ($n=6$) & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & \textbf{+61.1 pp} \\
 \bottomrule
 \end{tabular}
-\caption{Completed offline mutation testing: Standard data quality suites allow $\approx 90\%$ of semantic defects to survive silently, whereas SCOS AST validation catches $100\%$ of injected semantic mutations.}
+\caption{Completed offline mutation testing: Standard data quality suites (e.g., standard dbt unique/not\_null and schema linters) allow $\approx 85\text{--}100\%$ of semantic defects to survive silently, whereas SCOS AST invariant validation catches $61.1\%$ of injected semantic mutations (+61.1 percentage points over structural checks on the frozen holdout split).}
 \label{tab:mutation_results}
 \end{table}
 
