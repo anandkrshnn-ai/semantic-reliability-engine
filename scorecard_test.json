@@ -8,7 +8,7 @@
     "unsafe_query_rate": 0.0,
     "abstention_rate": 0.25,
     "mean_tool_calls": 1.75,
-    "p95_latency_ms": 1.1,
+    "p95_latency_ms": 1.26,
     "mean_estimated_cost": 0.01
   },
   "semantic_lift": 0.25,
