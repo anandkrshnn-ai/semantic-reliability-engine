@@ -583,8 +583,53 @@ def compile(metric, target_dialect):
         f"[bold]Dialect:[/bold] {target_dialect or comp.definition.dialect}",
         title="[bold green]Compiled Business Metric[/bold green]"
     ))
-    console.print(Syntax(sql_out, "sql", theme="monokai", line_numbers=True))
+@main.command()
+@click.option("--contract", type=click.Path(exists=True), required=True, help="Metric YAML definition with declarative probes")
+@click.option("--fixture", type=click.Path(exists=True), required=True, help="CSV fixture or DuckDB snapshot table")
+@click.option("--table-name", type=str, default="transactions", help="Database table name (default: transactions)")
+@click.option("--fail-on-critical/--no-fail", default=False, help="Exit non-zero on CRITICAL probe signal")
+def probe(contract, fixture, table_name, fail_on_critical):
+    """Execute declarative statistical probes to detect silent upstream data reality shifts."""
+    import yaml
+    import duckdb
+    from semantic_reliability.compiler.schema import MetricDefinition
+    from semantic_reliability.probes.engine import StatisticalProbeEngine
+
+    data = yaml.safe_load(Path(contract).read_text(encoding="utf-8"))
+    metric_def = MetricDefinition(**data)
+
+    console.print(f"\n🔍 [bold cyan]Scanning Semantic Reality for metric '{metric_def.metric}' against {Path(fixture).name}...[/bold cyan]\n")
+
+    con = duckdb.connect(":memory:")
+    con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM read_csv_auto('{fixture}')")
+
+    engine = StatisticalProbeEngine(conn=con, table_name=table_name)
+    signals = engine.run_all(metric_def)
+
+    if not signals:
+        console.print("[yellow]No statistical probes defined in contract YAML under 'probes:'.[/yellow]\n")
+        return
+
+    has_critical = False
+    for sig in signals:
+        color = "green" if sig.status == "HEALTHY" else ("yellow" if sig.status == "WARNING" else "bold red")
+        icon = "✅" if sig.status == "HEALTHY" else ("⚠️" if sig.status == "WARNING" else "🚨")
+
+        console.print(f"[{color}][{sig.status}] {icon} {sig.probe_type}[/{color}]")
+        console.print(f"  [bold]Target:[/bold] {sig.target}")
+        console.print(f"  [bold]Signal:[/bold] {sig.message}")
+        console.print(f"  [bold]Likely Cause:[/bold] {sig.likely_cause}")
+        console.print()
+
+        if sig.status == "CRITICAL":
+            has_critical = True
+
+    con.close()
+
+    if has_critical and fail_on_critical:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
+
