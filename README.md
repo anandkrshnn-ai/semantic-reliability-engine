@@ -16,7 +16,7 @@
 
 *Does your data CI/CD pipeline catch silent metric mutations, Cartesian joins, and population filter shifts — or are your dbt tests passing while your Looker dashboards show 40% wrong revenue?*
 
-[⚡ Quickstart](#-quickstart) • [🔍 3 Core Pillars](#-the-3-core-pillars) • [🧬 Chaos Mutation Testing](#-chaos-mutation-testing-for-data) • [🤖 CI/CD PR Bot Integration](#-github-pr-bot-integration) • [📚 CLI Reference](#-cli-reference)
+[📄 Enterprise Whitepaper](docs/ENTERPRISE_ARCHITECTURE_WHITEPAPER.md) • [⚡ Quickstart](#-quickstart) • [🔍 3 Core Pillars](#-the-3-core-pillars) • [🧬 Chaos Mutation Testing](#-chaos-mutation-testing-for-data) • [🤖 CI/CD PR Bot Integration](#-github-pr-bot-integration) • [📚 CLI Reference](#-cli-reference)
 
 </div>
 
