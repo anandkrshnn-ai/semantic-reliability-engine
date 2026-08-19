@@ -808,8 +808,47 @@ def mcp_serve(contracts):
     server.run_stdio()
 
 
+@main.command(name="benchmark-replay")
+@click.option("--trajectories", required=True, help="Path to input JSONL trajectories file")
+@click.option("--contracts", default="benchmark_corpus", help="Path to SCOS contracts directory")
+@click.option("--output", default=None, help="Optional output JSON scorecard file")
+def benchmark_replay(trajectories, contracts, output):
+    """Replay recorded agent trajectories against active SCOS contracts."""
+    from semantic_reliability.benchmark.replay import load_trajectories, TrajectoryReplayEngine
+    from semantic_reliability.benchmark.scenarios import SCENARIOS
+    from semantic_reliability.firewall.engine import ContractRegistry
+    from semantic_reliability.compiler.compiler import MetricCompiler
+
+    registry = ContractRegistry()
+    c_path = Path(contracts)
+    if c_path.exists():
+        for y_path in c_path.rglob("*.yaml"):
+            try:
+                comp = MetricCompiler.from_yaml_file(y_path)
+                registry.register(comp.definition)
+            except Exception:
+                pass
+
+    trajs = load_trajectories(trajectories)
+    engine = TrajectoryReplayEngine(registry=registry)
+    res = engine.replay_trajectories(trajs, SCENARIOS)
+
+    click.echo(f"Replayed {res['total_replayed']} trajectories.")
+    scorecard = res.get("scorecard", {})
+    if scorecard:
+        click.echo(f"Semantic Lift: {scorecard.get('semantic_lift')}")
+        click.echo(f"Net Governance Benefit: {scorecard.get('net_governance_benefit')}")
+
+    if output:
+        out_p = Path(output)
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(json.dumps(res, indent=2), encoding="utf-8")
+        click.echo(f"Replay report written to {output}")
+
+
 if __name__ == "__main__":
     main()
+
 
 
 

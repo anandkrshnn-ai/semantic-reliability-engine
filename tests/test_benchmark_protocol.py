@@ -142,3 +142,28 @@ def test_trajectory_privacy_redaction():
     assert "final_sql_raw" not in redacted
     assert redacted["final_sql_hash"] == "e5f6g7h8"
     assert redacted["scenario_id"] == "scen_001"
+
+
+def test_trajectory_export_and_replay_engine(tmp_path, benchmark_db, contract_registry):
+    from semantic_reliability.benchmark.replay import export_trajectories, load_trajectories, TrajectoryReplayEngine
+
+    gov_adapter = DeterministicGovernedAdapter()
+    trajectories = [gov_adapter.run(s) for s in SCENARIOS]
+
+    # 1. Export to JSONL
+    out_jsonl = tmp_path / "trajectories.jsonl"
+    export_trajectories(trajectories, out_jsonl)
+    assert out_jsonl.exists()
+
+    # 2. Load from JSONL
+    loaded = load_trajectories(out_jsonl)
+    assert len(loaded) == len(SCENARIOS)
+    assert loaded[0].final_sql_raw is None  # Confirmed redacted
+
+    # 3. Replay with in-memory trajectories containing final_sql_raw
+    engine = TrajectoryReplayEngine(registry=contract_registry, conn=benchmark_db)
+    replay_res = engine.replay_trajectories(trajectories, SCENARIOS)
+    assert replay_res["total_replayed"] == len(SCENARIOS)
+    assert "scorecard" in replay_res
+    assert replay_res["scorecard"]["governed_mcp"]["contract_compliance"] == 1.0
+

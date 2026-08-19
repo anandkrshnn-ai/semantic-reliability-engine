@@ -1,4 +1,4 @@
-"""Benchmark package exports for SRE Phase 12.1 Evaluation Harness."""
+"""Benchmark package exports for SRE Phase 12.1 & 12.2 Evaluation Harness."""
 from .protocol import (
     ScenarioClass,
     BenchmarkScenario,
@@ -15,6 +15,11 @@ from .adapters import (
     DeterministicGovernedAdapter,
 )
 from .scenarios import SCENARIOS
+from .replay import (
+    export_trajectories,
+    load_trajectories,
+    TrajectoryReplayEngine,
+)
 
 __all__ = [
     "ScenarioClass",
@@ -29,4 +34,7 @@ __all__ = [
     "DeterministicBaselineAdapter",
     "DeterministicGovernedAdapter",
     "SCENARIOS",
+    "export_trajectories",
+    "load_trajectories",
+    "TrajectoryReplayEngine",
 ]
