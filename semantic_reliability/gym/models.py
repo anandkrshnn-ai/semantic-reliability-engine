@@ -1,59 +1,84 @@
-import hashlib
 import json
-from typing import List, Dict, Any, Optional, Literal
-from pydantic import BaseModel, Field
+import hashlib
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import List, Dict, Any, Optional, Tuple
 
 
-class ExecutionEvidence(BaseModel):
-    execution_success: bool = True
-    contract_compliant: bool = True
-    assertions_passed: bool = True
-    result_changed: bool = False
-    variance_pct: float = 0.0
-    violations: List[str] = Field(default_factory=list)
+class RejectionReason(str, Enum):
+    EQUIVALENT_ON_FIXTURE = "equivalent_on_fixture"
+    UNEXECUTABLE = "unexecutable"
+    CHOSEN_CONTRACT_FAILURE = "chosen_contract_failure"
+    INSUFFICIENT_FIXTURE_CONTRAST = "insufficient_fixture_contrast"
+    INCOMPLETE_CONTRACT = "incomplete_contract"
+    REJECTED_NOT_SEMANTICALLY_DIVERGENT = "rejected_not_semantically_divergent"
 
 
-class GymEvidenceItem(BaseModel):
-    """Rich internal audit-grade record for a contract-grounded preference pair."""
+SPLIT_RULES: Dict[str, List[str]] = {
+    "train": ["FILTER_DROP", "AGGREGATION_SWAP", "COALESCE_BYPASS"],
+    "validation": ["BOUNDARY_SHIFT", "DISTINCT_DROP"],
+    "holdout": ["GRAIN_DROP", "MATH_OPERATOR_INVERT", "JOIN_PREDICATE_DROP"]
+}
+
+
+def assign_split(metric_id: str, family: str) -> str:
+    """Deterministic, leakage-resistant split assignment based on metric family."""
+    h = hashlib.md5(family.encode()).hexdigest()
+    val = int(h[:8], 16) % 100
+    if val < 70:
+        return "train"
+    if val < 85:
+        return "validation"
+    return "holdout"
+
+
+def assign_difficulty(mutation_type: str, contract: Any) -> Tuple[str, List[str]]:
+    """Deterministic multi-factor difficulty heuristic."""
+    reasons: List[str] = []
+    m_upper = mutation_type.upper()
+    if m_upper in ["FILTER_DROP", "AGGREGATION_SWAP", "COALESCE_BYPASS"]:
+        level = "easy"
+        reasons.append("direct_ast_mutation")
+    elif m_upper in ["BOUNDARY_SHIFT", "DISTINCT_DROP", "GRAIN_DROP"]:
+        level = "medium"
+        reasons.append("subtle_boundary_or_grain_shift")
+    else:
+        level = "hard"
+        reasons.append("relational_or_deduction_inversion")
+
+    if hasattr(contract, "invariants") and contract.invariants and contract.invariants.population:
+        req_filters = getattr(contract.invariants.population, "required_filters", [])
+        if len(req_filters) > 2:
+            reasons.append("multi_component_metric")
+
+    return level, reasons
+
+
+def compute_evidence_hash(evidence: Dict[str, Any]) -> str:
+    """Generates deterministic SHA256 hash from canonical JSON payload."""
+    payload = json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()[:16]
+
+
+@dataclass
+class GymExample:
     example_id: str
     prompt: str
     contract_id: str
-    contract_version: str = "1.0"
-    domain: str = "general"
-    split: str = "train"
+    contract_version: str
     chosen_sql: str
     rejected_sql: str
     mutation_type: str
     mutation_description: str
-    chosen_evidence: ExecutionEvidence
-    rejected_evidence: ExecutionEvidence
-    difficulty: Literal["easy", "medium", "hard", "expert"] = "medium"
+    chosen_evidence: Dict[str, Any]
+    rejected_evidence: Dict[str, Any]
+    difficulty: str
+    difficulty_reasons: List[str]
     fixture_id: str
-    policy_version: str = "1.0"
-    evidence_hash: str = ""
+    policy_version: str
+    evidence_hash: str
+    split: str
+    metric_family: str
 
-    def compute_hash(self) -> str:
-        payload = {
-            "prompt": self.prompt,
-            "chosen_sql": self.chosen_sql,
-            "rejected_sql": self.rejected_sql,
-            "mutation_type": self.mutation_type,
-            "contract_id": self.contract_id,
-            "variance_pct": self.rejected_evidence.variance_pct,
-        }
-        return hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()[:16]
-
-    def model_post_init(self, __context: Any) -> None:
-        if not self.evidence_hash:
-            self.evidence_hash = self.compute_hash()
-
-
-class CandidateRejectionStats(BaseModel):
-    """Tracks why candidate pairs were rejected to prevent noisy training data."""
-    candidates_generated: int = 0
-    accepted_pairs: int = 0
-    rejected_equivalent: int = 0
-    rejected_invalid_chosen: int = 0
-    rejected_insufficient_contrast: int = 0
-    rejected_incomplete_contract: int = 0
-    rejected_not_divergent: int = 0
+    def to_dict(self) -> Dict[str, Any]:
+        return {k: v for k, v in self.__dict__.items()}

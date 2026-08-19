@@ -5,99 +5,22 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from semantic_reliability.compiler.schema import MetricDefinition, SemanticInvariants, PopulationInvariant
-from semantic_reliability.gym.models import GymEvidenceItem, CandidateRejectionStats
-from semantic_reliability.gym.generator import SemanticGymGenerator
-from semantic_reliability.gym.difficulty import calibrate_difficulty
-from semantic_reliability.gym.split import assign_dataset_split
-from semantic_reliability.gym.export import export_gym_dataset
-from semantic_reliability.gym.formatters.dpo import format_to_dpo
-from semantic_reliability.gym.formatters.sft import format_to_sft
-from semantic_reliability.gym.formatters.rlhf import format_to_rlhf
+from semantic_reliability.gym.models import (
+    GymExample,
+    RejectionReason,
+    SPLIT_RULES,
+    assign_split,
+    assign_difficulty,
+    compute_evidence_hash,
+)
+from semantic_reliability.gym.generator import GymGenerator
+from semantic_reliability.gym.formatters import get_formatter, DPOFormatter, SFTFormatter, RLHFFormatter
+from semantic_reliability.gym.inspector import inspect_dataset
 from semantic_reliability.cli import main
 
 
 @pytest.fixture
-def gym_test_fixture(tmp_path):
-    csv_p = tmp_path / "transactions.csv"
-    df = pd.DataFrame({
-        "customer_id": [f"c_{i}" for i in range(100)],
-        "status": ["active"] * 50 + ["churned"] * 50,
-        "amount": [10.0] * 50 + [0.0] * 50,
-    })
-    df.to_csv(csv_p, index=False)
-
-    metric_def = MetricDefinition(
-        metric="net_revenue",
-        owner="finance",
-        grain="customer_month",
-        sql="SELECT customer_id, SUM(amount) AS net_revenue FROM transactions WHERE status = 'active' GROUP BY customer_id",
-        dialect="duckdb",
-        description="Total net revenue from active customer accounts",
-        invariants=SemanticInvariants(
-            population=PopulationInvariant(required_filters=["status = 'active'"])
-        )
-    )
-
-    return metric_def, csv_p
-
-
-def test_gym_evidence_pair_generation(gym_test_fixture):
-    metric_def, csv_p = gym_test_fixture
-    gen = SemanticGymGenerator(metric_def=metric_def, fixture_path=csv_p, table_name="transactions")
-    stats = CandidateRejectionStats()
-    pairs = gen.generate_evidence_pairs(stats=stats)
-
-    assert len(pairs) > 0
-    assert stats.candidates_generated > 0
-    assert stats.accepted_pairs == len(pairs)
-
-    first = pairs[0]
-    assert first.chosen_sql.strip() == metric_def.sql.strip()
-    assert first.rejected_sql.strip() != metric_def.sql.strip()
-    assert first.chosen_evidence.execution_success is True
-    assert first.chosen_evidence.contract_compliant is True
-    assert len(first.evidence_hash) > 0
-    assert first.difficulty in ("easy", "medium", "hard", "expert")
-    assert first.split in ("train", "val", "holdout")
-
-
-def test_gym_formatters(gym_test_fixture):
-    metric_def, csv_p = gym_test_fixture
-    gen = SemanticGymGenerator(metric_def=metric_def, fixture_path=csv_p, table_name="transactions")
-    pairs = gen.generate_evidence_pairs()
-    item = pairs[0]
-
-    dpo = format_to_dpo(item)
-    assert "prompt" in dpo and "chosen" in dpo and "rejected" in dpo
-    assert dpo["metadata"]["metric_id"] == "net_revenue"
-    assert "evidence_hash" in dpo["metadata"]
-
-    sft = format_to_sft(item)
-    assert "instruction" in sft and "output" in sft and "semantic_rationale" in sft
-
-    rlhf = format_to_rlhf(item)
-    assert len(rlhf["completions"]) == 2
-    assert rlhf["completions"][0]["reward"] == 1.0
-    assert rlhf["completions"][1]["reward"] == 0.0
-
-
-def test_structured_splitting():
-    assert assign_dataset_split("net_revenue", "finance", "FILTER_DROP") == "train"
-    assert assign_dataset_split("net_revenue", "finance", "BOUNDARY_SHIFT") == "val"
-    assert assign_dataset_split("net_revenue", "finance", "GRAIN_DROP") == "holdout"
-    assert assign_dataset_split("icu_admission", "healthcare", "FILTER_DROP") == "holdout"
-
-
-def test_difficulty_calibration():
-    assert calibrate_difficulty("MATH_OPERATOR_INVERT") == "expert"
-    assert calibrate_difficulty("JOIN_PREDICATE_DROP") == "expert"
-    assert calibrate_difficulty("BOUNDARY_SHIFT") == "hard"
-    assert calibrate_difficulty("FILTER_DROP", variance_pct=2.0) == "hard"  # subtle variance
-    assert calibrate_difficulty("FILTER_DROP", variance_pct=50.0) == "medium"
-    assert calibrate_difficulty("AGGREGATION_SWAP") == "easy"
-
-
-def test_cli_export_and_inspect_gym(tmp_path):
+def test_corpus(tmp_path):
     corpus_dir = tmp_path / "corpus"
     corpus_dir.mkdir()
     metric_file = corpus_dir / "net_revenue.yaml"
@@ -116,34 +39,79 @@ invariants:
     csv_p = corpus_dir / "net_revenue.csv"
     df = pd.DataFrame({"customer_id": ["c1", "c2"], "status": ["active", "churned"], "amount": [10.0, 0.0]})
     df.to_csv(csv_p, index=False)
+    return corpus_dir, csv_p
 
-    out_file = tmp_path / "exported_dpo.jsonl"
+
+def test_gym_generator_end_to_end(test_corpus):
+    corpus_dir, _ = test_corpus
+    generator = GymGenerator(corpus_dir=corpus_dir)
+    examples = generator.generate(target_split="all")
+
+    assert len(examples) > 0
+    first = examples[0]
+    assert first.chosen_sql.startswith("SELECT")
+    assert first.rejected_sql.startswith("SELECT")
+    assert first.chosen_evidence["execution"] is True
+    assert first.chosen_evidence["contract_passed"] is True
+    assert first.evidence_hash != ""
+    assert first.difficulty in ("easy", "medium", "hard")
+
+
+def test_gym_formatters(test_corpus):
+    corpus_dir, _ = test_corpus
+    generator = GymGenerator(corpus_dir=corpus_dir)
+    examples = generator.generate(target_split="all")
+    ex = examples[0]
+
+    dpo = get_formatter("dpo").format(ex)
+    assert "prompt" in dpo and "chosen" in dpo and "rejected" in dpo
+    assert dpo["metadata"]["contract_id"] == "net_revenue"
+
+    sft = get_formatter("sft").format(ex)
+    assert "prompt" in sft and "completion" in sft and "semantic_rationale" in sft
+
+    rlhf = get_formatter("rlhf").format(ex)
+    assert len(rlhf["completions"]) == 2
+    assert rlhf["completions"][0]["reward"] == 1.0
+    assert rlhf["completions"][1]["reward"] == 0.0
+
+
+def test_gym_split_and_difficulty():
+    split_res = assign_split("net_revenue", "finance")
+    assert split_res in ("train", "validation", "holdout")
+
+    diff, reasons = assign_difficulty("FILTER_DROP", None)
+    assert diff == "easy"
+    assert "direct_ast_mutation" in reasons
+
+    diff_math, _ = assign_difficulty("MATH_OPERATOR_INVERT", None)
+    assert diff_math == "hard"
+
+
+def test_cli_export_and_inspect(test_corpus, tmp_path):
+    corpus_dir, _ = test_corpus
+    out_file = tmp_path / "train.jsonl"
     runner = CliRunner()
 
-    # Test export-gym command
     res_export = runner.invoke(main, [
         "export-gym",
         "--corpus", str(corpus_dir),
-        "--format", "dpo",
         "--split", "all",
+        "--format", "dpo",
         "--output", str(out_file)
     ])
 
     assert res_export.exit_code == 0
-    assert "Generation Summary" in res_export.output
-    assert "Accepted Preference Pairs" in res_export.output
+    assert "Exported" in res_export.output
+    assert "Rejection Summary" in res_export.output
     assert out_file.exists()
 
-    # Test inspect-gym command
     res_inspect = runner.invoke(main, [
         "inspect-gym",
         "--dataset", str(out_file),
-        "--show-evidence",
-        "--limit", "1"
+        "--show-evidence"
     ])
 
     assert res_inspect.exit_code == 0
-    assert "Inspecting Semantic Gym Dataset" in res_inspect.output
-    assert "Chosen SQL (Compliant)" in res_inspect.output
-    assert "Rejected SQL (Mutated)" in res_inspect.output
-    assert "Semantic Evidence" in res_inspect.output
+    assert "Total records" in res_inspect.output
+    assert "Difficulty Distribution" in res_inspect.output
