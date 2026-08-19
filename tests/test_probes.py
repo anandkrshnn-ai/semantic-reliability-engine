@@ -6,18 +6,19 @@ from click.testing import CliRunner
 from semantic_reliability.compiler.schema import (
     MetricDefinition,
     MetricProbes,
-    PopulationStabilityProbe,
-    SemanticImplicationProbe,
+    PopulationProbe,
+    ImplicationProbe,
+    NullDriftProbe,
 )
 from semantic_reliability.probes.engine import StatisticalProbeEngine
+from semantic_reliability.probes.signals import SemanticProbeAlert
 from semantic_reliability.cli import main
 
 
 @pytest.fixture
 def probe_db():
     con = duckdb.connect(":memory:")
-    # Create sample customer transactions table
-    # 100 rows: 10 'active' with mrr > 0, 90 'churned' with mrr = 0
+    # 100 rows: 10 'active' with mrr > 0, 90 'churned' with mrr = 0, no nulls
     df = pd.DataFrame({
         "customer_id": [f"c_{i}" for i in range(100)],
         "status": ["active"] * 10 + ["churned"] * 90,
@@ -27,90 +28,58 @@ def probe_db():
     return con
 
 
-def test_population_stability_healthy(probe_db):
+def test_population_probe_healthy(probe_db):
     metric_def = MetricDefinition(
         metric="net_revenue",
         owner="finance",
         grain="customer_month",
         sql="SELECT * FROM transactions",
         probes=MetricProbes(
-            population_stability=[
-                PopulationStabilityProbe(
+            population=[
+                PopulationProbe(
                     column="status",
                     target_value="active",
                     baseline_rate=0.10,  # 10% expected
-                    threshold_std_dev=3.0,
+                    tolerance=0.05,
                 )
             ]
         )
     )
 
     engine = StatisticalProbeEngine(conn=probe_db, table_name="transactions")
-    signals = engine.run_all(metric_def)
-
-    assert len(signals) == 1
-    assert signals[0].status == "HEALTHY"
-    assert signals[0].current_value == 0.10
+    alerts = engine.run_all(metric_def)
+    assert len(alerts) == 0  # No alert triggered, within tolerance
 
 
-def test_population_stability_critical_drift(probe_db):
-    # Expect 80% active, but fixture only has 10% active -> huge Z-score
+def test_population_probe_drift(probe_db):
+    # Expect 80% active, but fixture only has 10% active -> triggers alert
     metric_def = MetricDefinition(
         metric="net_revenue",
         owner="finance",
         grain="customer_month",
         sql="SELECT * FROM transactions",
         probes=MetricProbes(
-            population_stability=[
-                PopulationStabilityProbe(
+            population=[
+                PopulationProbe(
                     column="status",
                     target_value="active",
                     baseline_rate=0.80,  # 80% expected
-                    threshold_std_dev=3.0,
+                    tolerance=0.05,
                 )
             ]
         )
     )
 
     engine = StatisticalProbeEngine(conn=probe_db, table_name="transactions")
-    signals = engine.run_all(metric_def)
+    alerts = engine.run_all(metric_def)
 
-    assert len(signals) == 1
-    assert signals[0].status == "CRITICAL"
-    assert signals[0].deviation > 5.0
-
-
-def test_semantic_implication_healthy(probe_db):
-    # In fixture: 100% of 'active' users have mrr_amount > 0
-    metric_def = MetricDefinition(
-        metric="net_revenue",
-        owner="finance",
-        grain="customer_month",
-        sql="SELECT * FROM transactions",
-        probes=MetricProbes(
-            implications=[
-                SemanticImplicationProbe(
-                    condition_column="status",
-                    condition_value="active",
-                    implication_column="mrr_amount",
-                    implication_operator=">",
-                    implication_value=0,
-                    baseline_confidence=0.95,
-                    threshold_drop=0.10,
-                )
-            ]
-        )
-    )
-
-    engine = StatisticalProbeEngine(conn=probe_db, table_name="transactions")
-    signals = engine.run_all(metric_def)
-
-    assert len(signals) == 1
-    assert signals[0].status == "HEALTHY"
-    assert signals[0].current_value == 1.0
+    assert len(alerts) == 1
+    assert alerts[0].signal_type == "status_population_rate_shift"
+    assert alerts[0].current == 0.10
+    assert alerts[0].confidence == "high"
 
 
-def test_semantic_implication_break():
+def test_implication_probe_decay():
     # Construct drifted database where 5 of 10 'active' users have mrr_amount = 0 (Free Trial dilution)
     con = duckdb.connect(":memory:")
     df = pd.DataFrame({
@@ -127,26 +96,58 @@ def test_semantic_implication_break():
         sql="SELECT * FROM transactions",
         probes=MetricProbes(
             implications=[
-                SemanticImplicationProbe(
+                ImplicationProbe(
                     condition_column="status",
                     condition_value="active",
                     implication_column="mrr_amount",
                     implication_operator=">",
                     implication_value=0,
                     baseline_confidence=0.98,
-                    threshold_drop=0.05,
+                    tolerance_drop=0.05,
                 )
             ]
         )
     )
 
     engine = StatisticalProbeEngine(conn=con, table_name="transactions")
-    signals = engine.run_all(metric_def)
+    alerts = engine.run_all(metric_def)
 
-    assert len(signals) == 1
-    assert signals[0].status == "CRITICAL"
-    assert signals[0].current_value == 0.50  # Only 50% paid
-    assert "Semantic Implication" in signals[0].probe_type
+    assert len(alerts) == 1
+    assert "implies_mrr_amount_decay" in alerts[0].signal_type
+    assert alerts[0].current == 0.50
+    assert alerts[0].confidence == "high"
+
+
+def test_null_drift_probe():
+    con = duckdb.connect(":memory:")
+    df = pd.DataFrame({
+        "customer_id": [f"c_{i}" for i in range(100)],
+        "status": ["active"] * 10 + [None] * 20 + ["churned"] * 70,
+    })
+    con.register("transactions", df)
+
+    metric_def = MetricDefinition(
+        metric="net_revenue",
+        owner="finance",
+        grain="customer_month",
+        sql="SELECT * FROM transactions",
+        probes=MetricProbes(
+            null_drift=[
+                NullDriftProbe(
+                    column="status",
+                    baseline_null_rate=0.0,
+                    tolerance=0.05,
+                )
+            ]
+        )
+    )
+
+    engine = StatisticalProbeEngine(conn=con, table_name="transactions")
+    alerts = engine.run_all(metric_def)
+
+    assert len(alerts) == 1
+    assert alerts[0].signal_type == "status_null_rate_shift"
+    assert alerts[0].current == 0.20
 
 
 def test_cli_probe_command(tmp_path):
@@ -157,11 +158,11 @@ owner: finance
 grain: customer_month
 sql: "SELECT * FROM transactions"
 probes:
-  population_stability:
+  population:
     - column: status
       target_value: 'active'
       baseline_rate: 0.80
-      threshold_std_dev: 2.0
+      tolerance: 0.05
 """, encoding="utf-8")
 
     csv_p = tmp_path / "transactions.csv"
@@ -178,4 +179,5 @@ probes:
 
     assert result.exit_code == 0
     assert "Scanning Semantic Reality" in result.output
-    assert "Population Stability" in result.output
+    assert "Semantic Probe" in result.output
+    assert "status_population_rate_shift" in result.output

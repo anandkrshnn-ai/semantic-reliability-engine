@@ -1,6 +1,7 @@
-from .engine import StatisticalProbeEngine, ProbeSignal
+from .engine import StatisticalProbeEngine
+from .signals import SemanticProbeAlert
 
 __all__ = [
     "StatisticalProbeEngine",
-    "ProbeSignal",
+    "SemanticProbeAlert",
 ]

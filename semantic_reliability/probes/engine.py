@@ -1,27 +1,11 @@
-import logging
-from typing import List, Literal, Optional, Any
-from pydantic import BaseModel, Field
 import duckdb
+import logging
+from typing import List, Optional
 
-from semantic_reliability.compiler.schema import (
-    MetricDefinition,
-    MetricProbes,
-    PopulationStabilityProbe,
-    SemanticImplicationProbe,
-)
+from semantic_reliability.compiler.schema import MetricDefinition, MetricProbes, PopulationProbe, ImplicationProbe, NullDriftProbe
+from .signals import SemanticProbeAlert
 
 logger = logging.getLogger("sre.probes")
-
-
-class ProbeSignal(BaseModel):
-    probe_type: str
-    target: str
-    status: Literal["HEALTHY", "WARNING", "CRITICAL"]
-    current_value: float
-    expected_value: float
-    deviation: float
-    message: str
-    likely_cause: str
 
 
 class StatisticalProbeEngine:
@@ -31,117 +15,123 @@ class StatisticalProbeEngine:
         self.conn = conn
         self.table = table_name
 
-    def run_all(self, definition: MetricDefinition) -> List[ProbeSignal]:
-        signals: List[ProbeSignal] = []
+    def run_all(self, definition: MetricDefinition) -> List[SemanticProbeAlert]:
+        alerts: List[SemanticProbeAlert] = []
         if not definition.probes:
-            return signals
+            return alerts
 
-        for probe in definition.probes.population_stability:
-            signals.append(self._check_population(probe))
+        for p_probe in definition.probes.population:
+            alert = self._check_population(p_probe, definition.metric)
+            if alert:
+                alerts.append(alert)
 
-        for probe in definition.probes.implications:
-            signals.append(self._check_implication(probe))
+        for imp_probe in definition.probes.implications:
+            alert = self._check_implication(imp_probe, definition.metric)
+            if alert:
+                alerts.append(alert)
 
-        return signals
+        for null_probe in definition.probes.null_drift:
+            alert = self._check_null_drift(null_probe, definition.metric)
+            if alert:
+                alerts.append(alert)
 
-    def _check_population(self, probe: PopulationStabilityProbe) -> ProbeSignal:
-        """
-        Checks: SELECT COUNT(CASE WHEN col = val THEN 1 END) / COUNT(*) FROM table
-        Computes binomial Z-score against declared baseline_rate.
-        """
-        val_str = f"'{probe.target_value}'" if isinstance(probe.target_value, str) else str(probe.target_value)
-        query = f"""
-            SELECT 
-                COUNT(CASE WHEN "{probe.column}" = {val_str} THEN 1 END) as match_count,
-                COUNT(*) as total_count
-            FROM {self.table}
-        """
+        return alerts
+
+    def _check_population(self, probe: PopulationProbe, metric_id: str) -> Optional[SemanticProbeAlert]:
+        if probe.target_value is None:
+            val_clause = "IS NULL"
+            query = f"SELECT COUNT(CASE WHEN \"{probe.column}\" {val_clause} THEN 1 END), COUNT(*) FROM {self.table}"
+        else:
+            val_clause = f"'{probe.target_value}'" if isinstance(probe.target_value, str) else str(probe.target_value)
+            query = f"SELECT COUNT(CASE WHEN \"{probe.column}\" = {val_clause} THEN 1 END), COUNT(*) FROM {self.table}"
+
         try:
             res = self.conn.execute(query).fetchone()
             match_count, total_count = res[0], res[1]
             current_rate = (match_count / total_count) if total_count > 0 else 0.0
 
-            p = probe.baseline_rate
-            n = total_count
-            std_dev = (p * (1.0 - p) / n) ** 0.5 if (n > 0 and 0.0 < p < 1.0) else 0.0
-            z_score = abs(current_rate - p) / std_dev if std_dev > 0 else 0.0
-
-            status: Literal["HEALTHY", "WARNING", "CRITICAL"] = "HEALTHY"
-            if z_score > probe.threshold_std_dev:
-                status = "CRITICAL" if z_score > 5.0 else "WARNING"
-
-            return ProbeSignal(
-                probe_type="Population Stability",
-                target=f"{probe.column} = {val_str}",
-                status=status,
-                current_value=round(current_rate, 4),
-                expected_value=round(p, 4),
-                deviation=round(z_score, 2),
-                message=f"Rate is {current_rate:.2%} (Expected {p:.2%}, Z={z_score:.2f})",
-                likely_cause="Upstream definition of categorical value changed or population mix shifted.",
-            )
+            deviation = abs(current_rate - probe.baseline_rate)
+            if deviation > probe.tolerance:
+                rel_change = ((current_rate - probe.baseline_rate) / probe.baseline_rate) * 100.0 if probe.baseline_rate > 0 else 0.0
+                return SemanticProbeAlert(
+                    signal_type=f"{probe.column}_population_rate_shift",
+                    contract=metric_id,
+                    baseline=round(probe.baseline_rate, 4),
+                    current=round(current_rate, 4),
+                    relative_change=round(rel_change, 1),
+                    confidence="high" if deviation > (probe.tolerance * 2) else "medium",
+                    likely_causes=[
+                        "Upstream status mapping changed in source CRM/database",
+                        "Cohort segmentation query filter shifted",
+                        "Fixture / production sample population mix shifted",
+                    ]
+                )
         except Exception as e:
-            return ProbeSignal(
-                probe_type="Population Stability",
-                target=probe.column,
-                status="CRITICAL",
-                current_value=0.0,
-                expected_value=probe.baseline_rate,
-                deviation=0.0,
-                message=f"Execution error: {str(e)}",
-                likely_cause="Schema change, missing table, or missing column.",
-            )
+            logger.error(f"Population probe failed for {metric_id}: {str(e)}")
+        return None
 
-    def _check_implication(self, probe: SemanticImplicationProbe) -> ProbeSignal:
-        """
-        Checks: P(Condition B | Condition A)
-        E.g., P(mrr_amount > 0 | status = 'active')
-        """
-        op = probe.implication_operator.upper()
-        cond_val_str = f"'{probe.condition_value}'" if isinstance(probe.condition_value, str) else str(probe.condition_value)
+    def _check_implication(self, probe: ImplicationProbe, metric_id: str) -> Optional[SemanticProbeAlert]:
+        cond_val = f"'{probe.condition_value}'" if isinstance(probe.condition_value, str) else str(probe.condition_value)
 
-        if op == "IS NOT NULL":
-            val_clause = "IS NOT NULL"
+        if probe.implication_operator.upper() == "IS NOT NULL":
+            imp_clause = f"\"{probe.implication_column}\" IS NOT NULL"
         else:
-            imp_val_str = f"'{probe.implication_value}'" if isinstance(probe.implication_value, str) else str(probe.implication_value)
-            val_clause = f"{probe.implication_operator} {imp_val_str}"
+            imp_val = f"'{probe.implication_value}'" if isinstance(probe.implication_value, str) else str(probe.implication_value)
+            imp_clause = f"\"{probe.implication_column}\" {probe.implication_operator} {imp_val}"
 
         query = f"""
             SELECT 
-                COUNT(CASE WHEN "{probe.condition_column}" = {cond_val_str} THEN 1 END) as condition_total,
-                COUNT(CASE WHEN "{probe.condition_column}" = {cond_val_str} AND "{probe.implication_column}" {val_clause} THEN 1 END) as implication_match
+                COUNT(CASE WHEN \"{probe.condition_column}\" = {cond_val} THEN 1 END) as cond_total,
+                COUNT(CASE WHEN \"{probe.condition_column}\" = {cond_val} AND {imp_clause} THEN 1 END) as imp_match
             FROM {self.table}
         """
         try:
             res = self.conn.execute(query).fetchone()
             cond_total, imp_match = res[0], res[1]
-
             confidence = (imp_match / cond_total) if cond_total > 0 else 0.0
             drop = probe.baseline_confidence - confidence
 
-            status: Literal["HEALTHY", "WARNING", "CRITICAL"] = "HEALTHY"
-            if drop > probe.threshold_drop:
-                status = "CRITICAL" if drop > 0.20 else "WARNING"
-
-            target_repr = f"{probe.condition_column}={cond_val_str} IMPLIES {probe.implication_column} {val_clause}"
-            return ProbeSignal(
-                probe_type="Semantic Implication",
-                target=target_repr,
-                status=status,
-                current_value=round(confidence, 4),
-                expected_value=round(probe.baseline_confidence, 4),
-                deviation=round(drop, 4),
-                message=f"Confidence dropped to {confidence:.2%} (Baseline {probe.baseline_confidence:.2%})",
-                likely_cause="Decoupling of business attributes. E.g., 'Active' users now include 'Free Trial' (zero revenue).",
-            )
+            if drop > probe.tolerance_drop:
+                rel_change = (drop / probe.baseline_confidence) * 100.0 if probe.baseline_confidence > 0 else 0.0
+                return SemanticProbeAlert(
+                    signal_type=f"{probe.condition_column}_implies_{probe.implication_column}_decay",
+                    contract=metric_id,
+                    baseline=round(probe.baseline_confidence, 4),
+                    current=round(confidence, 4),
+                    relative_change=-round(rel_change, 1),
+                    confidence="high" if drop > (probe.tolerance_drop * 2) else "medium",
+                    likely_causes=[
+                        "Decoupling of business attributes in upstream pipeline",
+                        f"Definition of '{probe.condition_column}' expanded to include records violating implication ({imp_clause})",
+                    ]
+                )
         except Exception as e:
-            return ProbeSignal(
-                probe_type="Semantic Implication",
-                target=probe.condition_column,
-                status="CRITICAL",
-                current_value=0.0,
-                expected_value=probe.baseline_confidence,
-                deviation=0.0,
-                message=f"Execution error: {str(e)}",
-                likely_cause="Schema change or missing column.",
-            )
+            logger.error(f"Implication probe failed for {metric_id}: {str(e)}")
+        return None
+
+    def _check_null_drift(self, probe: NullDriftProbe, metric_id: str) -> Optional[SemanticProbeAlert]:
+        query = f"SELECT COUNT(CASE WHEN \"{probe.column}\" IS NULL THEN 1 END), COUNT(*) FROM {self.table}"
+        try:
+            res = self.conn.execute(query).fetchone()
+            null_count, total_count = res[0], res[1]
+            current_rate = (null_count / total_count) if total_count > 0 else 0.0
+
+            deviation = abs(current_rate - probe.baseline_null_rate)
+            if deviation > probe.tolerance:
+                rel_change = ((current_rate - probe.baseline_null_rate) / probe.baseline_null_rate) * 100.0 if probe.baseline_null_rate > 0 else 0.0
+                return SemanticProbeAlert(
+                    signal_type=f"{probe.column}_null_rate_shift",
+                    contract=metric_id,
+                    baseline=round(probe.baseline_null_rate, 4),
+                    current=round(current_rate, 4),
+                    relative_change=round(rel_change, 1),
+                    confidence="medium",
+                    likely_causes=[
+                        "Upstream ETL pipeline partial failure",
+                        "Schema migration or unhandled column rename",
+                        "Source system API payload schema changes",
+                    ]
+                )
+        except Exception as e:
+            logger.error(f"Null drift probe failed for {metric_id}: {str(e)}")
+        return None

@@ -36,29 +36,37 @@ class SemanticInvariants(BaseModel):
     time: Optional[TimeInvariant] = Field(default_factory=TimeInvariant)
 
 
-class PopulationStabilityProbe(BaseModel):
+class PopulationProbe(BaseModel):
     """Checks if a filter predicate selects the expected proportion of the population."""
     column: str
-    target_value: Any
-    baseline_rate: float = Field(..., description="Expected % of rows matching target (0.0 to 1.0)")
-    threshold_std_dev: float = Field(default=3.0, description="Alert if drift > N standard deviations")
+    target_value: Optional[Any] = None
+    baseline_rate: float = Field(..., description="Expected ratio (0.0 to 1.0)")
+    tolerance: float = Field(0.05, description="Absolute tolerance for rate deviation")
 
 
-class SemanticImplicationProbe(BaseModel):
+class ImplicationProbe(BaseModel):
     """Checks if Condition A implies Condition B (e.g., 'Active' implies 'Revenue > 0')."""
     condition_column: str
     condition_value: Any
     implication_column: str
     implication_operator: str = Field(default=">", description="Comparison operator: '>', '<', '=', '!=', 'IS NOT NULL'")
     implication_value: Optional[Any] = None
-    baseline_confidence: float = Field(..., description="Expected % of rows where implication holds (0.0 to 1.0)")
-    threshold_drop: float = Field(default=0.10, description="Alert if confidence drops by > X%")
+    baseline_confidence: float = Field(..., description="Expected P(B|A) (0.0 to 1.0)")
+    tolerance_drop: float = Field(0.10, description="Alert if confidence drops by > X")
+
+
+class NullDriftProbe(BaseModel):
+    """Monitors the null rate of critical semantic columns."""
+    column: str
+    baseline_null_rate: float = Field(default=0.0, description="Expected null percentage (0.0 to 1.0)")
+    tolerance: float = Field(0.02, description="Max acceptable absolute null rate deviation")
 
 
 class MetricProbes(BaseModel):
     """Declarative statistical observability expectations."""
-    population_stability: List[PopulationStabilityProbe] = Field(default_factory=list)
-    implications: List[SemanticImplicationProbe] = Field(default_factory=list)
+    population: List[PopulationProbe] = Field(default_factory=list)
+    implications: List[ImplicationProbe] = Field(default_factory=list)
+    null_drift: List[NullDriftProbe] = Field(default_factory=list)
 
 
 class MetricDefinition(BaseModel):

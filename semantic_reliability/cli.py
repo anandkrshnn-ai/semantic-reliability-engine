@@ -604,29 +604,32 @@ def probe(contract, fixture, table_name, fail_on_critical):
     con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM read_csv_auto('{fixture}')")
 
     engine = StatisticalProbeEngine(conn=con, table_name=table_name)
-    signals = engine.run_all(metric_def)
+    alerts = engine.run_all(metric_def)
 
-    if not signals:
-        console.print("[yellow]No statistical probes defined in contract YAML under 'probes:'.[/yellow]\n")
+    if not alerts:
+        console.print(f"[bold green]✅ Semantic Reality Stable for metric '{metric_def.metric}'[/bold green]\n")
+        con.close()
         return
 
-    has_critical = False
-    for sig in signals:
-        color = "green" if sig.status == "HEALTHY" else ("yellow" if sig.status == "WARNING" else "bold red")
-        icon = "✅" if sig.status == "HEALTHY" else ("⚠️" if sig.status == "WARNING" else "🚨")
-
-        console.print(f"[{color}][{sig.status}] {icon} {sig.probe_type}[/{color}]")
-        console.print(f"  [bold]Target:[/bold] {sig.target}")
-        console.print(f"  [bold]Signal:[/bold] {sig.message}")
-        console.print(f"  [bold]Likely Cause:[/bold] {sig.likely_cause}")
+    console.print(f"[bold red]🚨 {len(alerts)} Semantic Probe Alert(s) for metric '{metric_def.metric}':[/bold red]\n")
+    for alert in alerts:
+        border_color = "red" if alert.confidence == "high" else "yellow"
+        causes_text = "\n".join(f"- {c}" for c in alert.likely_causes)
+        console.print(Panel(
+            f"[bold]Baseline:[/bold] {alert.baseline:.2%}\n"
+            f"[bold]Current Rate:[/bold] {alert.current:.2%}\n"
+            f"[bold]Relative Change:[/bold] {alert.relative_change:+.1f}%\n"
+            f"[bold]Action Required:[/bold] {alert.action_required}\n\n"
+            f"[italic bold]Likely Causes:[/italic bold]\n{causes_text}",
+            title=f"[{alert.confidence.upper()}] {alert.signal_type}",
+            border_style=border_color
+        ))
         console.print()
-
-        if sig.status == "CRITICAL":
-            has_critical = True
 
     con.close()
 
-    if has_critical and fail_on_critical:
+    has_high_confidence = any(alert.confidence == "high" for alert in alerts)
+    if has_high_confidence and fail_on_critical:
         sys.exit(1)
 
 
