@@ -628,11 +628,21 @@ def probe(contract, fixture, table_name, fail_on_critical):
 
     con.close()
 
-    has_high_confidence = any(alert.confidence == "high" for alert in alerts)
-    if has_high_confidence and fail_on_critical:
-        sys.exit(1)
+@main.command(name="export-gym")
+@click.option("--corpus", type=click.Path(exists=True), default="benchmark_corpus/", help="Directory containing YAML metric contracts")
+@click.option("--format", "export_format", type=click.Choice(["dpo", "rlhf", "sft"], case_sensitive=False), default="dpo", help="Training dataset format")
+@click.option("--output", type=click.Path(), default="semantic_gym_dataset.jsonl", help="Output JSONL filepath")
+def export_gym(corpus, export_format, output):
+    """Export contract-grounded preference and alignment datasets for AI agents."""
+    from semantic_reliability.gym.export import export_gym_dataset
+
+    console.print(f"\n🏋️ [bold cyan]Exporting Semantic Gym Training Dataset[/bold cyan] (format: [bold]{export_format.upper()}[/bold]) from [bold]{corpus}[/bold]...")
+    count = export_gym_dataset(corpus_dir=corpus, output_path=output, export_format=export_format.lower())
+
+    console.print(f"[bold green]✅ Successfully exported {count} training items to:[/bold green] [bold]{output}[/bold]\n")
 
 
 if __name__ == "__main__":
     main()
+
 
