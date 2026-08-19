@@ -189,7 +189,7 @@ To enable zero-compute regression testing, SCOS-MCP records full agent execution
 \subsection{Completed Holdout Mutation Analysis}
 Prior to live model evaluation, we validated the SCOS invariant compiler on our development and frozen holdout corpora using denominator-precise AST chaos mutations across 5 mutation operators (Filter Drop, Boundary Shift, Aggregation Swap, Coalesce Bypass, Grain Drop). 
 
-Let $M$ denote the total number of metric models in a track, let $V_i$ denote the number of valid injected semantic mutations for model $i$, and let $C_i^{(m)}$ denote the number of mutations detected by testing method $m \in \{\text{standard}, \text{SCOS}\}$. We define the eligible model set as $\mathcal{I} = \{i \in \{1, \dots, M\} : V_i > 0\}$. In our benchmark, all 14 evaluated models meet denominator eligibility: $|\mathcal{I}_{\text{dev}}| = 8$ ($\sum V_{\text{dev}} = 25$) and $|\mathcal{I}_{\text{holdout}}| = 6$ ($\sum V_{\text{holdout}} = 18$). Notably, models with zero detections (e.g., \texttt{customer\_retention\_rate} in Dev, \texttt{hospital\_readmission\_rate} in Holdout) satisfy $V_i > 0$ and remain strictly in the denominator.
+Let $M$ denote the total number of metric contracts in a track, let $V_i$ denote the number of valid injected semantic mutations for contract $i$, and let $C_i^{(m)}$ denote the number of mutations detected by testing method $m \in \{\text{standard}, \text{SCOS}\}$. We define the eligible contract set as $\mathcal{I} = \{i \in \{1, \dots, M\} : V_i > 0\}$. In our benchmark, all 14 evaluated metric contracts meet denominator eligibility: $|\mathcal{I}_{\text{dev}}| = 8$ ($\sum V_{\text{dev}} = 25$) and $|\mathcal{I}_{\text{holdout}}| = 6$ ($\sum V_{\text{holdout}} = 18$). Notably, contracts with zero detections (e.g., \texttt{customer\_retention\_rate} in Dev, \texttt{hospital\_readmission\_rate} in Holdout) satisfy $V_i > 0$ and remain strictly in the denominator.
 
 We define two distinct estimands:
 \begin{enumerate}[noitemsep]
@@ -197,11 +197,13 @@ We define two distinct estimands:
     \begin{equation}
     R_{\text{micro}}^{(m)} = \frac{\sum_{i \in \mathcal{I}} C_i^{(m)}}{\sum_{i \in \mathcal{I}} V_i}, \qquad \Delta_{\text{micro}} = R_{\text{micro}}^{(\text{SCOS})} - R_{\text{micro}}^{(\text{standard})}
     \end{equation}
-    \item \textbf{Macro-Averaged Catch Rate:} Unweighted mean across individual models to evaluate cross-model dispersion:
+    \item \textbf{Macro-Averaged Catch Rate:} Unweighted mean across individual metric contracts to evaluate cross-contract dispersion:
     \begin{equation}
     R_{\text{macro}}^{(m)} = \frac{1}{|\mathcal{I}|} \sum_{i \in \mathcal{I}} \frac{C_i^{(m)}}{V_i}, \qquad \Delta_{\text{macro}} = R_{\text{macro}}^{(\text{SCOS})} - R_{\text{macro}}^{(\text{standard})}
     \end{equation}
 \end{enumerate}
+
+On the frozen holdout split, the SCOS semantic gate detected 11 of 18 valid executable defects, whereas the specified standard structural baseline detected none. On the development split, SCOS detected 16 of 25 defects compared with 4 detected by the baseline. These results measure mutation-detection performance on the frozen corpus and do not establish production-wide semantic correctness.
 
 \begin{table}[ht!]
 \centering
@@ -225,7 +227,7 @@ Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & 0.0\% &
 \small
 \begin{tabular}{lcccccc}
 \toprule
-\textbf{Model ID ($i$)} & \textbf{Track Split} & $V_i$ & $C_i^{(\text{standard})}$ & $C_i^{(\text{SCOS})}$ & \textbf{Standard Rate} & \textbf{SCOS Rate} \\
+\textbf{Metric Contract ID ($i$)} & \textbf{Track Split} & $V_i$ & $C_i^{(\text{standard})}$ & $C_i^{(\text{SCOS})}$ & \textbf{Standard Rate} & \textbf{SCOS Rate} \\
 \midrule
 \texttt{average\_order\_value} & Dev & 2 & 0 & 1 & 0.0\% & 50.0\% \\
 \texttt{checkout\_conversion\_rate} & Dev & 3 & 1 & 1 & 33.3\% & 33.3\% \\
@@ -248,7 +250,7 @@ Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & 0.0\% &
 \textit{Holdout Track Totals / Averages} & \textit{Holdout} & \textit{18} & \textit{0} & \textit{11} & \textit{0.0\% (macro)} & \textit{61.1\% (macro)} \\
 \bottomrule
 \end{tabular}
-\caption{Granular per-model audit table across all 14 evaluated metric contracts, documenting exact valid mutation counts, detection frequencies, and individual rates underlying the aggregate benchmark metrics.}
+\caption{Granular per-contract audit table across all 14 evaluated benchmark metric contracts, documenting exact valid mutation counts, detection frequencies, and individual rates underlying the aggregate benchmark metrics.}
 \label{tab:per_model_audit}
 \end{table}
 
