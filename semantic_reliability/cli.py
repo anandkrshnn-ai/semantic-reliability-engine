@@ -630,19 +630,84 @@ def probe(contract, fixture, table_name, fail_on_critical):
 
 @main.command(name="export-gym")
 @click.option("--corpus", type=click.Path(exists=True), default="benchmark_corpus/", help="Directory containing YAML metric contracts")
-@click.option("--format", "export_format", type=click.Choice(["dpo", "rlhf", "sft"], case_sensitive=False), default="dpo", help="Training dataset format")
+@click.option("--split", "split_filter", type=click.Choice(["train", "val", "holdout", "all"], case_sensitive=False), default="all", help="Structured split filter")
+@click.option("--format", "export_format", type=click.Choice(["dpo", "rlhf", "sft", "evidence"], case_sensitive=False), default="dpo", help="Training dataset format")
 @click.option("--output", type=click.Path(), default="semantic_gym_dataset.jsonl", help="Output JSONL filepath")
-def export_gym(corpus, export_format, output):
+def export_gym(corpus, split_filter, export_format, output):
     """Export contract-grounded preference and alignment datasets for AI agents."""
     from semantic_reliability.gym.export import export_gym_dataset
 
-    console.print(f"\n🏋️ [bold cyan]Exporting Semantic Gym Training Dataset[/bold cyan] (format: [bold]{export_format.upper()}[/bold]) from [bold]{corpus}[/bold]...")
-    count = export_gym_dataset(corpus_dir=corpus, output_path=output, export_format=export_format.lower())
+    console.print(f"\n🏋️ [bold cyan]Exporting Semantic Gym Dataset[/bold cyan] (format: [bold]{export_format.upper()}[/bold], split: [bold]{split_filter.upper()}[/bold]) from [bold]{corpus}[/bold]...")
+    count, stats = export_gym_dataset(
+        corpus_dir=corpus,
+        output_path=output,
+        export_format=export_format.lower(),
+        split_filter=split_filter.lower()
+    )
 
-    console.print(f"[bold green]✅ Successfully exported {count} training items to:[/bold green] [bold]{output}[/bold]\n")
+    console.print(f"\n[bold]Generation Summary:[/bold]")
+    console.print(f"  Candidates Generated: [cyan]{stats.candidates_generated}[/cyan]")
+    console.print(f"  Accepted Preference Pairs: [bold green]{count}[/bold green]")
+    console.print(f"  [italic]Rejections Breakdown:[/italic]")
+    console.print(f"    - Equivalent on fixture: {stats.rejected_equivalent}")
+    console.print(f"    - Invalid chosen SQL: {stats.rejected_invalid_chosen}")
+    console.print(f"    - Insufficient fixture contrast: {stats.rejected_insufficient_contrast}")
+    console.print(f"    - Incomplete contract / no violation: {stats.rejected_incomplete_contract}")
+    console.print(f"    - Rejected query not divergent: {stats.rejected_not_divergent}")
+    console.print(f"\n[bold green]✅ Output written to:[/bold green] [bold]{output}[/bold]\n")
+
+
+@main.command(name="inspect-gym")
+@click.option("--dataset", type=click.Path(exists=True), required=True, help="Path to exported JSONL dataset")
+@click.option("--show-evidence", is_flag=True, default=False, help="Display detailed execution evidence")
+@click.option("--limit", type=int, default=3, help="Max records to preview")
+def inspect_gym(dataset, show_evidence, limit):
+    """Inspect and verify records in an exported Semantic Gym dataset."""
+    import json
+    p = Path(dataset)
+    lines = p.read_text(encoding="utf-8").strip().split("\n")
+    total = len(lines) if lines and lines[0] else 0
+
+    console.print(f"\n🔍 [bold cyan]Inspecting Semantic Gym Dataset:[/bold cyan] [bold]{p.name}[/bold] ({total} total records)\n")
+
+    for i, line in enumerate(lines[:limit]):
+        if not line.strip():
+            continue
+        rec = json.loads(line)
+        prompt = rec.get("prompt", rec.get("instruction", "N/A"))
+        chosen = rec.get("chosen", rec.get("output", "N/A"))
+        rejected = rec.get("rejected", rec.get("negative_example", "N/A"))
+        meta = rec.get("metadata", {})
+
+        diff_str = meta.get("difficulty", "medium").upper()
+        diff_color = "green" if diff_str == "EASY" else ("yellow" if diff_str in ("MEDIUM", "HARD") else "bold red")
+
+        content = (
+            f"[bold]Prompt:[/bold] {prompt}\n\n"
+            f"[bold green]Chosen SQL (Compliant):[/bold green]\n[green]{chosen}[/green]\n\n"
+            f"[bold red]Rejected SQL (Mutated):[/bold red]\n[red]{rejected}[/red]"
+        )
+
+        if show_evidence and meta:
+            content += (
+                f"\n\n[italic bold]Semantic Evidence:[/italic bold]\n"
+                f"  - Metric ID: {meta.get('metric_id', 'N/A')}\n"
+                f"  - Mutation: {meta.get('mutation_type', 'N/A')}\n"
+                f"  - Empirical Variance: {meta.get('variance_pct', 0.0):.1f}%\n"
+                f"  - Violations: {', '.join(meta.get('violations', [])) or 'None'}\n"
+                f"  - Hash: {meta.get('evidence_hash', 'N/A')}"
+            )
+
+        console.print(Panel(
+            content,
+            title=f"Record #{i+1} [{diff_color}][{diff_str}][/{diff_color}] - {meta.get('metric_id', 'Example')}",
+            border_style="cyan"
+        ))
+        console.print()
 
 
 if __name__ == "__main__":
     main()
+
 
 

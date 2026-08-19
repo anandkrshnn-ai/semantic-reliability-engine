@@ -1,16 +1,21 @@
+from .models import GymEvidenceItem, ExecutionEvidence, CandidateRejectionStats
 from .generator import SemanticGymGenerator
-from .difficulty import MutationDifficulty, calibrate_difficulty
+from .difficulty import calibrate_difficulty
+from .split import assign_dataset_split
 from .export import export_gym_dataset
-from .formatters.dpo import DPOPreferenceItem
-from .formatters.rlhf import RLHFRewardItem
-from .formatters.sft import SFTInstructionItem
+from .formatters.dpo import format_to_dpo
+from .formatters.sft import format_to_sft
+from .formatters.rlhf import format_to_rlhf
 
 __all__ = [
+    "GymEvidenceItem",
+    "ExecutionEvidence",
+    "CandidateRejectionStats",
     "SemanticGymGenerator",
-    "MutationDifficulty",
     "calibrate_difficulty",
+    "assign_dataset_split",
     "export_gym_dataset",
-    "DPOPreferenceItem",
-    "RLHFRewardItem",
-    "SFTInstructionItem",
+    "format_to_dpo",
+    "format_to_sft",
+    "format_to_rlhf",
 ]

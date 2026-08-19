@@ -1,30 +1,26 @@
-from enum import Enum
-from typing import Dict, Any
+from typing import Literal
 
+def calibrate_difficulty(
+    mutation_type: str,
+    variance_pct: float = 0.0,
+    has_subtle_predicate: bool = False
+) -> Literal["easy", "medium", "hard", "expert"]:
+    """
+    Calibrates difficulty based on semantic detectability:
+    - easy: explicit missing predicate, obvious aggregation swap with large variance
+    - medium: standard boundary shift, coalesce bypass
+    - hard: subtle variance (<5%), grain alteration, temporal attribution
+    - expert: multi-component deduction omission, relational join drop
+    """
+    m_type = mutation_type.upper()
 
-class MutationDifficulty(str, Enum):
-    EASY = "EASY"        # Aggregation swap or distinct drop (often alters scalar shape/scale)
-    MEDIUM = "MEDIUM"    # Missing basic WHERE predicate
-    HARD = "HARD"        # Boundary shift (>= vs >) or subtle temporal attribution window
-    EXPERT = "EXPERT"    # Multi-component deduction omission or relational join predicate drop
+    if m_type in ("JOIN_PREDICATE_DROP", "MATH_OPERATOR_INVERT"):
+        return "expert"
 
+    if m_type in ("GRAIN_DROP", "BOUNDARY_SHIFT") or (0.0 < abs(variance_pct) <= 5.0) or has_subtle_predicate:
+        return "hard"
 
-# Difficulty mapping for mutation operators
-DIFFICULTY_MAP = {
-    "AGGREGATION_SWAP": MutationDifficulty.EASY,
-    "DISTINCT_DROP": MutationDifficulty.EASY,
-    "FILTER_DROP": MutationDifficulty.MEDIUM,
-    "COALESCE_BYPASS": MutationDifficulty.MEDIUM,
-    "BOUNDARY_SHIFT": MutationDifficulty.HARD,
-    "GRAIN_DROP": MutationDifficulty.HARD,
-    "MATH_OPERATOR_INVERT": MutationDifficulty.EXPERT,
-    "JOIN_PREDICATE_DROP": MutationDifficulty.EXPERT,
-}
+    if m_type in ("FILTER_DROP", "COALESCE_BYPASS"):
+        return "medium"
 
-
-def calibrate_difficulty(mutation_type: str, empirical_variance_pct: float = 0.0) -> MutationDifficulty:
-    base = DIFFICULTY_MAP.get(mutation_type.upper(), MutationDifficulty.MEDIUM)
-    # If variance is very subtle (< 5%), elevate difficulty to HARD/EXPERT
-    if 0.0 < empirical_variance_pct < 5.0 and base in (MutationDifficulty.EASY, MutationDifficulty.MEDIUM):
-        return MutationDifficulty.HARD
-    return base
+    return "easy"

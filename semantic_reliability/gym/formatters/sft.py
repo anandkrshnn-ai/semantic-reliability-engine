@@ -1,24 +1,23 @@
-from typing import Dict, Any, List
-from pydantic import BaseModel
+from typing import Dict, Any
+from semantic_reliability.gym.models import GymEvidenceItem
 
 
-class SFTInstructionItem(BaseModel):
-    """Supervised Fine-Tuning instruction format with chain-of-thought semantic contract rationale."""
-    instruction: str
-    input: str
-    output: str
-    negative_example: str
-    semantic_rationale: str
-    metric_id: str
-
-    def to_jsonl_dict(self) -> Dict[str, Any]:
-        return {
-            "instruction": self.instruction,
-            "input": self.input,
-            "output": self.output,
-            "negative_example": self.negative_example,
-            "semantic_rationale": self.semantic_rationale,
-            "metadata": {
-                "metric_id": self.metric_id,
-            }
+def format_to_sft(item: GymEvidenceItem) -> Dict[str, Any]:
+    """Formats GymEvidenceItem into SFT instruction-tuning format with reasoning traces."""
+    rationale = (
+        f"The query must satisfy business contract '{item.contract_id}'. "
+        f"A flawed formulation might introduce '{item.mutation_description}' resulting in a {item.rejected_evidence.variance_pct:.1f}% metric variance."
+    )
+    return {
+        "instruction": item.prompt,
+        "input": f"Contract ID: {item.contract_id}\nDomain: {item.domain}",
+        "output": item.chosen_sql,
+        "negative_example": item.rejected_sql,
+        "semantic_rationale": rationale,
+        "metadata": {
+            "example_id": item.example_id,
+            "metric_id": item.contract_id,
+            "difficulty": item.difficulty,
+            "evidence_hash": item.evidence_hash,
         }
+    }
