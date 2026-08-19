@@ -187,20 +187,34 @@ To enable zero-compute regression testing, SCOS-MCP records full agent execution
 \label{sec:results}
 
 \subsection{Completed Holdout Mutation Analysis}
-Prior to live model evaluation, we validated the SCOS invariant compiler on our development and frozen holdout corpora using denominator-precise AST chaos mutations across 5 mutation operators (Filter Drop, Boundary Shift, Aggregation Swap, Coalesce Bypass, Grain Drop). We report both pooled (micro-aggregated across all injected mutations) and macro-averaged (unweighted mean across metric models) catch rates.
+Prior to live model evaluation, we validated the SCOS invariant compiler on our development and frozen holdout corpora using denominator-precise AST chaos mutations across 5 mutation operators (Filter Drop, Boundary Shift, Aggregation Swap, Coalesce Bypass, Grain Drop). 
+
+Let $M$ denote the total number of metric models evaluated in a track, let $V_i$ denote the number of valid injected semantic mutations for model $i$, and let $D_i$ denote the number of mutations detected by a testing suite. We define the eligible model set as $\mathcal{I} = \{i \in \{1, \dots, M\} : V_i > 0\}$. In our benchmark, all models meet denominator eligibility: $|\mathcal{I}_{\text{dev}}| = 8$ ($V_{\text{dev}} = 24$) and $|\mathcal{I}_{\text{holdout}}| = 6$ ($V_{\text{holdout}} = 18$).
+
+We define two distinct estimands:
+\begin{enumerate}[noitemsep]
+    \item \textbf{Pooled (Micro) Catch Rate:} Primary aggregated metric over all valid mutations:
+    \begin{equation}
+    \text{Rate}_{\text{micro}} = \frac{\sum_{i \in \mathcal{I}} D_i}{\sum_{i \in \mathcal{I}} V_i}, \qquad \Delta_{\text{micro}} = \text{Rate}_{\text{micro}}^{\text{SCOS}} - \text{Rate}_{\text{micro}}^{\text{Standard}}
+    \end{equation}
+    \item \textbf{Macro-Averaged Catch Rate:} Unweighted mean across individual models to evaluate dispersion:
+    \begin{equation}
+    \text{Rate}_{\text{macro}} = \frac{1}{|\mathcal{I}|} \sum_{i \in \mathcal{I}} \frac{D_i}{V_i}, \qquad \Delta_{\text{macro}} = \text{Rate}_{\text{macro}}^{\text{SCOS}} - \text{Rate}_{\text{macro}}^{\text{Standard}}
+    \end{equation}
+\end{enumerate}
 
 \begin{table}[ht!]
 \centering
 \small
 \begin{tabular}{lcccccc}
 \toprule
-\textbf{Corpus Track} & \textbf{Models} & \textbf{Valid Mutations} & \textbf{Standard Structural} & \textbf{SCOS Semantic} & \textbf{Pooled Gain ($\Delta_{\text{micro}}$)} & \textbf{Macro Gain ($\Delta_{\text{macro}}$)} \\
+\textbf{Corpus Track} & $|\mathcal{I}|$ & $\sum V_i$ & \textbf{Structural (pooled)} & \textbf{SCOS Catch (pooled)} & \textbf{Gain (pooled, pp)} & \textbf{Gain (macro, pp)} \\
 \midrule
 Development Track & 8 & 24 & 16.7\% (4/24) & \textbf{66.7\%} (16/24) & \textbf{+50.0 pp} & +45.4 pp (60.4\% vs 15.0\%) \\
 Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & \textbf{+61.1 pp} & +61.1 pp (61.1\% vs 0.0\%) \\
 \bottomrule
 \end{tabular}
-\caption{Completed offline mutation testing: Standard structural data quality suites (e.g., standard dbt unique/not\_null and schema linters) allow $\approx 83\text{--}100\%$ of semantic defects to survive silently, whereas SCOS AST invariant validation catches $61.1\%$ of injected semantic mutations (+61.1 percentage points over structural checks on the frozen holdout split under both pooled and macro aggregations).}
+\caption{Completed offline mutation benchmark: Standard structural data quality suites (e.g., standard dbt unique/not\_null and schema linters) allow $\approx 83\text{--}100\%$ of semantic defects to survive silently. SCOS AST invariant validation catches $61.1\%$ of injected semantic mutations (+61.1 percentage points over structural checks on the frozen holdout split under both pooled and macro aggregations).}
 \label{tab:mutation_results}
 \end{table}
 
