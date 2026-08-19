@@ -150,3 +150,40 @@ def test_mcp_prompts(mcp_server):
     msg_text = resp_get["result"]["messages"][0]["content"]["text"]
     assert "net_revenue" in msg_text
     assert "status = 'active'" in msg_text
+
+
+def test_mcp_error_handling_and_limits(mcp_server):
+    # 1. Unknown method
+    req_unknown = {"jsonrpc": "2.0", "id": 9, "method": "unsupported/method"}
+    resp_unknown = mcp_server.handle_request(req_unknown)
+    assert resp_unknown["error"]["code"] == -32601
+
+    # 2. Malformed SQL
+    req_malformed = {
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "tools/call",
+        "params": {
+            "name": "scos_validate_sql",
+            "arguments": {
+                "metric_id": "net_revenue",
+                "sql": "SELECT FROM WHERE ;;; INVALID",
+            }
+        }
+    }
+    resp_malformed = mcp_server.handle_request(req_malformed)
+    content = json.loads(resp_malformed["result"]["content"][0]["text"])
+    assert content["compliant"] is False
+    assert content["decision"] == "DENY"
+    assert content["violations"][0]["rule"] == "syntax_error"
+
+    # 3. Payload size limit
+    req_large = {"jsonrpc": "2.0", "id": 11, "method": "initialize"}
+    resp_large = mcp_server.handle_request(req_large, raw_payload_len=2_000_000)
+    assert resp_large["error"]["code"] == -32600
+    assert "Payload size exceeds limit" in resp_large["error"]["message"]
+
+    # 4. Verify audit trail was recorded
+    assert len(mcp_server.audit_log) > 0
+    assert mcp_server.audit_log[-1].method == "tools/call"
+

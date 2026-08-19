@@ -19,8 +19,14 @@ class ScosMcpServer:
     SERVER_NAME = "scos-mcp-server"
     SERVER_VERSION = "1.0.0"
     PROTOCOL_VERSION = "2024-11-05"
+    MAX_REQUEST_BYTES = 1_000_000
 
-    def __init__(self, registry: Optional[ContractRegistry] = None, contract_dir: Optional[str | Path] = None):
+    def __init__(
+        self,
+        registry: Optional[ContractRegistry] = None,
+        contract_dir: Optional[str | Path] = None,
+        max_request_bytes: int = 1_000_000,
+    ):
         if registry:
             self.registry = registry
         elif contract_dir:
@@ -30,12 +36,16 @@ class ScosMcpServer:
 
         self.handlers = ScosMcpHandlers(self.registry)
         self.audit_log: list[McpAuditEvent] = []
+        self.max_request_bytes = max_request_bytes
 
-    def handle_request(self, req: Dict[str, Any]) -> Dict[str, Any]:
+    def handle_request(self, req: Dict[str, Any], raw_payload_len: Optional[int] = None) -> Dict[str, Any]:
         """Process a single JSON-RPC 2.0 request."""
         req_id = req.get("id")
         method = req.get("method")
         params = req.get("params", {})
+
+        if raw_payload_len and raw_payload_len > self.max_request_bytes:
+            return self._error_response(req_id, -32600, f"Payload size exceeds limit of {self.max_request_bytes} bytes")
 
         if not method:
             return self._error_response(req_id, -32600, "Invalid Request: missing method")
