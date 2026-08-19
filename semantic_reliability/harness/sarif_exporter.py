@@ -77,7 +77,7 @@ class SARIFExporter:
                         "driver": {
                             "name": cls.TOOL_NAME,
                             "version": cls.TOOL_VERSION,
-                            "informationUri": "https://github.com/monika/semantic-reliability-engine",
+                            "informationUri": "https://github.com/anandkrshnn-ai/semantic-reliability-engine",
                             "rules": list(rules_map.values()),
                         }
                     },

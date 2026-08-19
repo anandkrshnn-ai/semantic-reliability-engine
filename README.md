@@ -1,6 +1,6 @@
 # Semantic Reliability Engine (SRE) & SCOS-MCP
 
-[![CI](https://github.com/semantic-reliability-engine/semantic-reliability-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/semantic-reliability-engine/semantic-reliability-engine/actions)
+[![CI](https://github.com/anandkrshnn-ai/semantic-reliability-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/anandkrshnn-ai/semantic-reliability-engine/actions)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Specification: SCOS v1.0](https://img.shields.io/badge/spec-SCOS_v1.0-green.svg)](spec/SCOS_V1_SPECIFICATION.md)
@@ -47,7 +47,7 @@ Standard data observability tests evaluate table syntax and row counts; they can
 
 ### 1. Installation
 ```bash
-git clone https://github.com/semantic-reliability-engine/semantic-reliability-engine.git
+git clone https://github.com/anandkrshnn-ai/semantic-reliability-engine.git
 cd semantic-reliability-engine
 pip install -e .
 ```
