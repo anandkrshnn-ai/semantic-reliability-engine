@@ -97,7 +97,7 @@ class OracleValidator:
         }
 
     def _compare_dataframes(self, df_cand: pd.DataFrame, df_true: pd.DataFrame) -> bool:
-        """Order-insensitive, numeric-tolerant dataframe comparison."""
+        """Order-insensitive, numeric-tolerant canonical row dataframe comparison."""
         if df_cand is None or df_true is None:
             return False
         if df_cand.empty and df_true.empty:
@@ -108,22 +108,25 @@ class OracleValidator:
             return False
 
         try:
-            if set(df_cand.columns) == set(df_true.columns):
-                c_sorted = df_cand[sorted(df_cand.columns)].sort_values(by=sorted(df_cand.columns)).reset_index(drop=True)
-                t_sorted = df_true[sorted(df_true.columns)].sort_values(by=sorted(df_true.columns)).reset_index(drop=True)
-            else:
-                c_sorted = df_cand.sort_values(by=list(df_cand.columns)).reset_index(drop=True)
-                t_sorted = df_true.sort_values(by=list(df_true.columns)).reset_index(drop=True)
+            def canonical_row(row, cols):
+                items = []
+                for c in cols:
+                    val = row[c]
+                    if pd.isna(val) or val is None:
+                        items.append(f"{c}:__NULL__")
+                    elif isinstance(val, (int, float, np.number)):
+                        rounded = round(float(val), 4)
+                        items.append(f"{c}:{rounded}")
+                    else:
+                        items.append(f"{c}:{str(val).strip()}")
+                return tuple(items)
 
-            for i in range(c_sorted.shape[1]):
-                col_c = c_sorted.iloc[:, i]
-                col_t = t_sorted.iloc[:, i]
-                if pd.api.types.is_numeric_dtype(col_c) and pd.api.types.is_numeric_dtype(col_t):
-                    if not np.allclose(col_c.fillna(0), col_t.fillna(0), atol=self.float_tol, rtol=self.float_tol):
-                        return False
-                else:
-                    if not (col_c.astype(str) == col_t.astype(str)).all():
-                        return False
-            return True
+            c_cols = sorted(df_cand.columns) if set(df_cand.columns) == set(df_true.columns) else list(df_cand.columns)
+            t_cols = sorted(df_true.columns) if set(df_cand.columns) == set(df_true.columns) else list(df_true.columns)
+
+            c_rows = sorted([canonical_row(row, c_cols) for _, row in df_cand.iterrows()])
+            t_rows = sorted([canonical_row(row, t_cols) for _, row in df_true.iterrows()])
+
+            return c_rows == t_rows
         except Exception:
             return False

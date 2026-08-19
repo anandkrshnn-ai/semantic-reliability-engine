@@ -316,3 +316,45 @@ def test_live_governed_adapter_and_cli(contract_registry):
     assert "Benchmark live run complete" in res.output
 
 
+def test_oracle_dataframe_canonical_comparison_robustness(benchmark_db, contract_registry):
+    """Stress-tests canonical dataframe comparator with nulls in sort keys, duplicates, and mixed types."""
+    import pandas as pd
+    from semantic_reliability.benchmark.oracle import OracleValidator
+
+    oracle = OracleValidator(conn=benchmark_db, registry=contract_registry)
+
+    # 1. Nulls in sort keys and values
+    df_a = pd.DataFrame([
+        {"id": 1, "status": None, "val": 10.00001},
+        {"id": 2, "status": "active", "val": 20.0},
+        {"id": None, "status": "pending", "val": 5.0},
+    ])
+    df_b = pd.DataFrame([
+        {"id": None, "status": "pending", "val": 5.00002},
+        {"id": 2, "status": "active", "val": 20.0},
+        {"id": 1, "status": None, "val": 10.0},
+    ])
+    assert oracle._compare_dataframes(df_a, df_b) is True
+
+    # 2. Duplicate rows with varied associated attributes
+    df_c = pd.DataFrame([
+        {"user_id": "U1", "cat": "A", "amt": 100.0},
+        {"user_id": "U1", "cat": "B", "amt": 50.0},
+        {"user_id": "U1", "cat": "A", "amt": 100.0},
+    ])
+    df_d = pd.DataFrame([
+        {"user_id": "U1", "cat": "A", "amt": 100.0},
+        {"user_id": "U1", "cat": "A", "amt": 100.0},
+        {"user_id": "U1", "cat": "B", "amt": 50.0},
+    ])
+    assert oracle._compare_dataframes(df_c, df_d) is True
+
+    # 3. Differing values fail comparison
+    df_e = pd.DataFrame([
+        {"user_id": "U1", "cat": "A", "amt": 100.0},
+        {"user_id": "U1", "cat": "B", "amt": 99.0},
+    ])
+    assert oracle._compare_dataframes(df_c, df_e) is False
+
+
+

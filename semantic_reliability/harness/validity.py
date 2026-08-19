@@ -12,6 +12,12 @@ class BenchmarkConfidence(str, Enum):
 
 
 class BenchmarkValidity(str, Enum):
+    """
+    Heuristic classification of fixture contrast and contract completeness.
+    NOTE: These thresholds are heuristic contrast coverage checks (verifying the presence of both
+    positive and negative cohort rows in test fixtures so mutations produce measurable output deltas)
+    and should not be interpreted as formal statistical hypothesis test certificates.
+    """
     CONCLUSIVE = "CONCLUSIVE"
     QUALIFIED = "QUALIFIED"
     INCONCLUSIVE = "INCONCLUSIVE"
