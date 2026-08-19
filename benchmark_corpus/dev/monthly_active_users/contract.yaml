@@ -1,0 +1,12 @@
+metric: monthly_active_users
+owner: product
+grain: monthly
+invariants:
+  population:
+    required_filters:
+    - status = 'active'
+    - is_bot = false
+sql: "SELECT\n  DATE_TRUNC('month', login_date) AS reporting_month,\n  COUNT(DISTINCT\
+  \ user_id) AS active_users\nFROM user_logins\nWHERE status = 'active' AND is_bot\
+  \ = false\nGROUP BY DATE_TRUNC('month', login_date)"
+description: Unique count of active authenticated users engaging within 30 days

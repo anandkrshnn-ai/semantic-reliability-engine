@@ -1,0 +1,5 @@
+sku,warehouse_id,cogs,stock_value,is_obsolete
+SKU-A,WH-1,50000.0,10000.0,false
+SKU-B,WH-1,20000.0,5000.0,false
+SKU-C,WH-2,80000.0,20000.0,false
+SKU-D,WH-2,0.0,15000.0,true

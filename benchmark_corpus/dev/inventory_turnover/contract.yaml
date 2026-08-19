@@ -1,0 +1,10 @@
+metric: inventory_turnover
+owner: supply_chain
+grain: warehouse
+invariants:
+  population:
+    required_filters:
+    - is_obsolete = false
+sql: "SELECT\n  warehouse_id,\n  SUM(cogs) / SUM(stock_value) AS turnover_ratio\n\
+  FROM inventory_movements\nWHERE is_obsolete = false\nGROUP BY warehouse_id"
+description: Ratio of Cost of Goods Sold to average ending inventory value

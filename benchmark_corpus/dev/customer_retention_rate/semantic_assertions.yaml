@@ -1,0 +1,10 @@
+suite_name: semantic_customer_retention_rate
+assertions:
+- type: not_null
+  columns:
+  - cohort_id
+  - retention_rate
+- type: metric_value
+  column: retention_rate
+  min_value: 0.0
+  max_value: 1.0

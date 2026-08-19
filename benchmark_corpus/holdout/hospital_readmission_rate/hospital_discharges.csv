@@ -1,0 +1,6 @@
+admission_id,department,readmitted_30d,is_planned_readmission,patient_deceased
+ADM-1,cardiology,true,false,false
+ADM-2,cardiology,false,false,false
+ADM-3,orthopedics,true,true,false
+ADM-4,orthopedics,false,false,false
+ADM-5,cardiology,true,false,true

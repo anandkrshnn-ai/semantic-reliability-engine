@@ -1,0 +1,10 @@
+version: 2
+models:
+- name: model_marketplace_take_rate
+  columns:
+  - name: seller_id
+    tests:
+    - not_null
+  - name: take_rate
+    tests:
+    - not_null

@@ -1,0 +1,14 @@
+suite_name: semantic_fintech_chargeback_rate
+assertions:
+- type: not_null
+  columns:
+  - merchant_id
+  - chargeback_rate
+- type: required_population
+  source_table: settled_payments
+  required_filter: is_sandbox = false
+  join_key: merchant_id
+- type: metric_value
+  column: chargeback_rate
+  min_value: 0.0
+  max_value: 1.0

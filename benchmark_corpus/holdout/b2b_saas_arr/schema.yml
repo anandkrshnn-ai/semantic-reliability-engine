@@ -1,0 +1,10 @@
+version: 2
+models:
+- name: model_b2b_saas_arr
+  columns:
+  - name: customer_id
+    tests:
+    - not_null
+  - name: annual_recurring_revenue
+    tests:
+    - not_null

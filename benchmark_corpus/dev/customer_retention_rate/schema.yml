@@ -1,0 +1,10 @@
+version: 2
+models:
+- name: model_customer_retention_rate
+  columns:
+  - name: cohort_id
+    tests:
+    - not_null
+  - name: retention_rate
+    tests:
+    - not_null

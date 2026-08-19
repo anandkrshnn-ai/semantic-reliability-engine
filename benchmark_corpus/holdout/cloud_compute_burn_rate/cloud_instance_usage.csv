@@ -1,0 +1,5 @@
+instance_id,team,instance_hours,hourly_rate,spot_discount_credit,is_benchmark_run
+I-1,core-ai,100.0,4.50,50.0,false
+I-2,core-ai,200.0,4.50,100.0,false
+I-3,web-api,50.0,1.20,0.0,false
+I-4,benchmark-job,500.0,8.00,0.0,true

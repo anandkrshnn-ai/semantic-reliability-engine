@@ -1,0 +1,5 @@
+session_id,user_id,event_name,is_internal_ip
+S1,U1,checkout_complete,false
+S2,U2,checkout_start,false
+S3,U3,checkout_complete,false
+S4,U4,checkout_complete,true

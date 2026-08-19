@@ -1,0 +1,6 @@
+ticket_id,agent_id,resolved_within_sla,is_spam,priority
+T1,A1,true,false,high
+T2,A1,true,false,high
+T3,A2,false,false,medium
+T4,A2,true,false,low
+T5,A3,false,true,low

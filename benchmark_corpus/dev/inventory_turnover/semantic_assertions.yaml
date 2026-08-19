@@ -1,0 +1,9 @@
+suite_name: semantic_inventory_turnover
+assertions:
+- type: not_null
+  columns:
+  - warehouse_id
+  - turnover_ratio
+- type: metric_value
+  column: turnover_ratio
+  min_value: 1.0

@@ -1,0 +1,16 @@
+policy_version: "1.0"
+fixture_adequacy_method: "contrast-v1"
+contract_coverage_method: "metric-requirements-v1"
+description: "Versioned decision thresholds for certifying analytical benchmark validity and confidence."
+
+thresholds:
+  conclusive:
+    min_fixture_adequacy: 80.0
+    min_contract_coverage: 60.0
+    description: "High confidence. Fixture provides necessary contrast and contract defines required semantic dimensions."
+  qualified:
+    min_fixture_adequacy: 60.0
+    min_contract_coverage: 40.0
+    description: "Medium confidence. Benchmark reflects partial semantic contracts or acceptable fixture contrast."
+  inconclusive:
+    description: "Low confidence. Fixture lacks necessary empirical contrast. Results cannot establish true semantic catch rate."

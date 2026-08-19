@@ -1,0 +1,5 @@
+cohort_id,customer_id,returned_next_period,status
+2026-Q1,C1,true,active
+2026-Q1,C2,true,active
+2026-Q1,C3,false,active
+2026-Q1,C4,false,banned

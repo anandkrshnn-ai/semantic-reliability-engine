@@ -1,0 +1,10 @@
+metric: checkout_conversion_rate
+owner: marketing
+grain: aggregate
+invariants:
+  population:
+    required_filters:
+    - is_internal_ip = false
+sql: "SELECT\n  COUNT(CASE WHEN event_name = 'checkout_complete' THEN 1 END) * 1.0\
+  \ / COUNT(*) AS conversion_rate\nFROM checkout_events\nWHERE is_internal_ip = false"
+description: Ratio of completed checkouts to checkout sessions started

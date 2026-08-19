@@ -1,0 +1,10 @@
+version: 2
+models:
+- name: model_monthly_active_users
+  columns:
+  - name: reporting_month
+    tests:
+    - not_null
+  - name: active_users
+    tests:
+    - not_null

@@ -1,0 +1,127 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Semantic Reliability Engine",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/monika/semantic-reliability-engine",
+          "rules": [
+            {
+              "id": "SRE-SEMANTIC_LOGIC_SHIFT",
+              "name": "SEMANTIC_LOGIC_SHIFT",
+              "shortDescription": {
+                "text": "Filter conditions modified."
+              },
+              "fullDescription": {
+                "text": "Filter conditions modified. - The population criteria has changed. Dashboards will silently include/exclude different entities."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "Remediation: Verify whether logical criteria change is an approved business metric update."
+              }
+            },
+            {
+              "id": "SRE-AGGREGATION_FUNCTION_SHIFT",
+              "name": "AGGREGATION_FUNCTION_SHIFT",
+              "shortDescription": {
+                "text": "Aggregation functions altered (e.g. SUM vs AVG vs COUNT)."
+              },
+              "fullDescription": {
+                "text": "Aggregation functions altered (e.g. SUM vs AVG vs COUNT). - The mathematical computation of the metric has changed."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "Remediation: Ensure mathematical formula conforms to the canonical business metric definition."
+              }
+            },
+            {
+              "id": "SRE-GRAIN_DRIFT",
+              "name": "GRAIN_DRIFT",
+              "shortDescription": {
+                "text": "Aggregation grain dimensions shifted."
+              },
+              "fullDescription": {
+                "text": "Aggregation grain dimensions shifted. - Output dataset grain changed. Downstream dimensional models and BI will break."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "Remediation: Restore required grouping dimensions."
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SRE-SEMANTIC_LOGIC_SHIFT",
+          "level": "error",
+          "message": {
+            "text": "[CRITICAL] Filter conditions modified.: Baseline filter:\n  WHERE region = 'NA' AND status = 'active'\nCandidate filter:\n  WHERE region = 'NA' AND last_login >= CURRENT_DATE - INTERVAL '30' DAY Impact: The population criteria has changed. Dashboards will silently include/exclude different entities."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/models/fct_net_revenue_drifted.sql"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SRE-AGGREGATION_FUNCTION_SHIFT",
+          "level": "error",
+          "message": {
+            "text": "[HIGH] Aggregation functions altered (e.g. SUM vs AVG vs COUNT).: Baseline functions: ['Sum', 'Sum']\nCandidate functions: ['Sum'] Impact: The mathematical computation of the metric has changed."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/models/fct_net_revenue_drifted.sql"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SRE-GRAIN_DRIFT",
+          "level": "error",
+          "message": {
+            "text": "[CRITICAL] Aggregation grain dimensions shifted.: Baseline grain: ['customer_id', 'TIMESTAMP_TRUNC(transaction_date, MONTH)']\nCandidate grain: ['customer_id', \"DATE_TRUNC('MONTH', transaction_date)\"] Impact: Output dataset grain changed. Downstream dimensional models and BI will break."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/models/fct_net_revenue_drifted.sql"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

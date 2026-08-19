@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semantic-reliability-engine"
+version = "0.1.0"
+description = "AST-level Semantic Drift Detection, Metric Compilation, and Chaos Mutation Testing for SQL Data Pipelines"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Semantic Reliability Team" }
+]
+dependencies = [
+    "sqlglot>=25.0.0",
+    "pyyaml>=6.0.1",
+    "pydantic>=2.0.0",
+    "click>=8.1.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+semantic-reliability = "semantic_reliability.cli:main"
+sre = "semantic_reliability.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

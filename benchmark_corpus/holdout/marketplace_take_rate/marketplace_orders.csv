@@ -1,0 +1,6 @@
+order_id,seller_id,gmv_amount,commission_fee,is_cancelled,is_test_order
+ORD-1,SEL-A,1000.0,150.0,false,false
+ORD-2,SEL-A,2000.0,300.0,false,false
+ORD-3,SEL-B,500.0,75.0,false,false
+ORD-4,SEL-C,10000.0,1500.0,true,false
+ORD-5,SEL-D,50000.0,7500.0,false,true

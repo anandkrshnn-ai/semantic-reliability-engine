@@ -1,0 +1,17 @@
+suite_name: semantic_net_revenue
+assertions:
+- type: not_null
+  columns:
+  - customer_id
+  - reporting_month
+  - net_revenue
+- type: required_population
+  source_table: transactions
+  required_filter: status = 'active'
+- type: required_population
+  source_table: transactions
+  required_filter: region = 'NA'
+- type: metric_value
+  column: net_revenue
+  expected: 2800.0
+  tolerance_pct: 5.0

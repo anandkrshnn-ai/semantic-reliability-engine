@@ -1,0 +1,13 @@
+suite_name: semantic_average_order_value
+assertions:
+- type: not_null
+  columns:
+  - customer_id
+  - avg_order_value
+- type: required_population
+  source_table: orders
+  required_filter: is_test = false
+  join_key: customer_id
+- type: metric_value
+  column: avg_order_value
+  max_value: 1000.0

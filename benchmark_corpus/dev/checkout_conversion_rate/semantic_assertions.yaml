@@ -1,0 +1,9 @@
+suite_name: semantic_checkout_conversion_rate
+assertions:
+- type: not_null
+  columns:
+  - conversion_rate
+- type: metric_value
+  column: conversion_rate
+  min_value: 0.0
+  max_value: 1.0

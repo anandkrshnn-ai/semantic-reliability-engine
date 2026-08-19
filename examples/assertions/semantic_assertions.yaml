@@ -1,0 +1,24 @@
+suite_name: semantic_reliability_tests
+description: Semantic test suite enforcing population criteria, dimensional grain, and metric value bounds.
+assertions:
+  - type: not_null
+    columns:
+      - customer_id
+      - reporting_month
+      - net_revenue
+  - type: expected_grain
+    columns:
+      - customer_id
+      - reporting_month
+  - type: required_population
+    source_table: transactions
+    required_filter: "status = 'active'"
+    join_key: customer_id
+  - type: required_population
+    source_table: transactions
+    required_filter: "region = 'NA'"
+    join_key: customer_id
+  - type: metric_value
+    column: net_revenue
+    expected_value: 3000.0
+    tolerance_pct: 5.0

@@ -1,0 +1,10 @@
+version: 2
+models:
+- name: model_average_order_value
+  columns:
+  - name: customer_id
+    tests:
+    - not_null
+  - name: avg_order_value
+    tests:
+    - not_null

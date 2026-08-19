@@ -1,0 +1,10 @@
+version: 2
+models:
+- name: model_ad_campaign_roas
+  columns:
+  - name: channel
+    tests:
+    - not_null
+  - name: roas
+    tests:
+    - not_null

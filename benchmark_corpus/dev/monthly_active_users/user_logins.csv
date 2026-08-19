@@ -1,0 +1,7 @@
+user_id,login_date,status,is_bot,region
+U1,2026-01-10 09:00:00,active,false,NA
+U1,2026-01-15 14:00:00,active,false,NA
+U2,2026-01-12 11:00:00,active,false,EU
+U3,2026-01-20 16:30:00,suspended,false,NA
+U4,2026-01-22 18:00:00,active,true,NA
+U5,2026-01-25 10:15:00,active,false,NA

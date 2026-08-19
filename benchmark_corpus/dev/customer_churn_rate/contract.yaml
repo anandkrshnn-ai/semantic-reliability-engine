@@ -1,0 +1,10 @@
+metric: customer_churn_rate
+owner: growth
+grain: plan
+invariants:
+  population:
+    required_filters:
+    - is_trial = false
+sql: "SELECT\n  plan,\n  COUNT(CASE WHEN cancelled = true THEN 1 END) * 1.0 / COUNT(*)\
+  \ AS churn_rate\nFROM subscriptions\nWHERE is_trial = false\nGROUP BY plan"
+description: Proportion of active subscription cancellations per cohort

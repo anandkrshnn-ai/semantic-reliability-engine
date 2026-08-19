@@ -1,0 +1,6 @@
+sub_id,customer_id,start_date,cancelled,is_trial,plan
+S1,C1,2026-01-01,false,false,pro
+S2,C2,2026-01-01,true,false,pro
+S3,C3,2026-01-01,false,false,enterprise
+S4,C4,2026-01-01,true,true,free_trial
+S5,C5,2026-01-01,false,false,pro

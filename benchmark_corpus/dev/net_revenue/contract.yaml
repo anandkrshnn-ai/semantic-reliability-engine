@@ -1,0 +1,18 @@
+metric: net_revenue
+owner: finance
+grain: customer_month
+invariants:
+  population:
+    required_filters:
+    - status = 'active'
+    - region = 'NA'
+  aggregation:
+    positive_components:
+    - type = 'invoice'
+    negative_components:
+    - type = 'refund'
+sql: "SELECT\n  customer_id,\n  DATE_TRUNC('month', transaction_date) AS reporting_month,\n\
+  \  SUM(CASE WHEN type = 'invoice' THEN amount ELSE 0 END) -\n  SUM(CASE WHEN type\
+  \ = 'refund' THEN amount ELSE 0 END) AS net_revenue\nFROM transactions\nWHERE region\
+  \ = 'NA' AND status = 'active'\nGROUP BY customer_id, DATE_TRUNC('month', transaction_date)"
+description: Recognized revenue minus refunds for active enterprise users in NA

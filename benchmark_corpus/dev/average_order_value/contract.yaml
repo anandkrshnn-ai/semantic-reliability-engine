@@ -1,0 +1,11 @@
+metric: average_order_value
+owner: ecommerce
+grain: customer
+invariants:
+  population:
+    required_filters:
+    - order_status = 'completed'
+    - is_test = false
+sql: "SELECT\n  customer_id,\n  AVG(order_amount) AS avg_order_value\nFROM orders\n\
+  WHERE order_status = 'completed' AND is_test = false\nGROUP BY customer_id"
+description: Mean value of completed, non-fraudulent purchase orders

@@ -1,0 +1,19 @@
+metric: cloud_compute_burn_rate
+owner: finops
+grain: team
+invariants:
+  population:
+    required_filters:
+    - is_benchmark_run = false
+  grain:
+    required_dimensions:
+    - team
+  aggregation:
+    positive_components:
+    - instance_hours
+    negative_components:
+    - spot_discount_credit
+sql: "SELECT\n  team,\n  SUM(instance_hours * hourly_rate) - SUM(spot_discount_credit)\
+  \ AS net_compute_cost\nFROM cloud_instance_usage\nWHERE is_benchmark_run = false\n\
+  GROUP BY team"
+description: Total cloud infrastructure compute cost after spot instance credits

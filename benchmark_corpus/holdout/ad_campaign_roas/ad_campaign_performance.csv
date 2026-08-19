@@ -1,0 +1,5 @@
+campaign_id,channel,attributed_revenue,ad_spend,is_test_campaign
+CMP-1,paid_search,50000.0,10000.0,false
+CMP-2,paid_search,80000.0,20000.0,false
+CMP-3,social_ads,30000.0,15000.0,false
+CMP-4,staging_test,100.0,5000.0,true

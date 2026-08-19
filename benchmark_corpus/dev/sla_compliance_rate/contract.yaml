@@ -1,0 +1,11 @@
+metric: sla_compliance_rate
+owner: customer_support
+grain: priority
+invariants:
+  population:
+    required_filters:
+    - is_spam = false
+sql: "SELECT\n  priority,\n  SUM(CASE WHEN resolved_within_sla = true THEN 1 ELSE\
+  \ 0 END) * 1.0 / COUNT(*) AS sla_rate\nFROM support_tickets\nWHERE is_spam = false\n\
+  GROUP BY priority"
+description: Percentage of support tickets resolved within contracted SLA window

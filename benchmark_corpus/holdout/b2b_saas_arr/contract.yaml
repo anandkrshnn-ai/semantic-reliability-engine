@@ -1,0 +1,19 @@
+metric: b2b_saas_arr
+owner: finance_revops
+grain: customer
+invariants:
+  population:
+    required_filters:
+    - status = 'active'
+    - is_internal_account = false
+  grain:
+    required_dimensions:
+    - customer_id
+  aggregation:
+    required_function: SUM
+  units:
+    currency: USD
+sql: "SELECT\n  customer_id,\n  SUM(mrr_amount * 12.0) AS annual_recurring_revenue\n\
+  FROM saas_contracts\nWHERE status = 'active' AND is_internal_account = false\nGROUP\
+  \ BY customer_id"
+description: Normalized annual recurring contract value across active enterprise subscriptions

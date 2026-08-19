@@ -1,0 +1,11 @@
+metric: customer_retention_rate
+owner: analytics
+grain: cohort
+invariants:
+  population:
+    required_filters:
+    - status = 'active'
+sql: "SELECT\n  cohort_id,\n  SUM(CASE WHEN returned_next_period = true THEN 1 ELSE\
+  \ 0 END) * 1.0 / COUNT(*) AS retention_rate\nFROM retention_cohorts\nWHERE status\
+  \ = 'active'\nGROUP BY cohort_id"
+description: Percentage of active cohort returning in subsequent period

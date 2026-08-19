@@ -1,0 +1,10 @@
+version: 2
+models:
+- name: model_cloud_compute_burn_rate
+  columns:
+  - name: team
+    tests:
+    - not_null
+  - name: net_compute_cost
+    tests:
+    - not_null

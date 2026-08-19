@@ -1,0 +1,13 @@
+version: 2
+models:
+- name: model_net_revenue
+  columns:
+  - name: customer_id
+    tests:
+    - not_null
+  - name: reporting_month
+    tests:
+    - not_null
+  - name: net_revenue
+    tests:
+    - not_null

@@ -1,0 +1,14 @@
+suite_name: semantic_customer_churn_rate
+assertions:
+- type: not_null
+  columns:
+  - plan
+  - churn_rate
+- type: required_population
+  source_table: subscriptions
+  required_filter: is_trial = false
+  join_key: customer_id
+- type: metric_value
+  column: churn_rate
+  min_value: 0.0
+  max_value: 1.0

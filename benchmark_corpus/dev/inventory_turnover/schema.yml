@@ -1,0 +1,10 @@
+version: 2
+models:
+- name: model_inventory_turnover
+  columns:
+  - name: warehouse_id
+    tests:
+    - not_null
+  - name: turnover_ratio
+    tests:
+    - not_null

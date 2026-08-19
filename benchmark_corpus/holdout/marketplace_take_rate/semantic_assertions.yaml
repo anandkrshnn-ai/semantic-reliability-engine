@@ -1,0 +1,10 @@
+suite_name: semantic_marketplace_take_rate
+assertions:
+- type: not_null
+  columns:
+  - seller_id
+  - take_rate
+- type: metric_value
+  column: take_rate
+  min_value: 0.05
+  max_value: 0.3

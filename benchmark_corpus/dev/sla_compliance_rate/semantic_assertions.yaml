@@ -1,0 +1,10 @@
+suite_name: semantic_sla_compliance_rate
+assertions:
+- type: not_null
+  columns:
+  - priority
+  - sla_rate
+- type: metric_value
+  column: sla_rate
+  min_value: 0.0
+  max_value: 1.0

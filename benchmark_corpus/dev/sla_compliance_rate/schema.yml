@@ -1,0 +1,10 @@
+version: 2
+models:
+- name: model_sla_compliance_rate
+  columns:
+  - name: priority
+    tests:
+    - not_null
+  - name: sla_rate
+    tests:
+    - not_null

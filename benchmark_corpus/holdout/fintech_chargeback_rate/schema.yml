@@ -1,0 +1,10 @@
+version: 2
+models:
+- name: model_fintech_chargeback_rate
+  columns:
+  - name: merchant_id
+    tests:
+    - not_null
+  - name: chargeback_rate
+    tests:
+    - not_null

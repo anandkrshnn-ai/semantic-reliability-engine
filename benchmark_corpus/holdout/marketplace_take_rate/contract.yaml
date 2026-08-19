@@ -1,0 +1,15 @@
+metric: marketplace_take_rate
+owner: marketplace_ops
+grain: seller
+invariants:
+  population:
+    required_filters:
+    - is_cancelled = false
+    - is_test_order = false
+  grain:
+    required_dimensions:
+    - seller_id
+sql: "SELECT\n  seller_id,\n  SUM(commission_fee) / SUM(gmv_amount) AS take_rate\n\
+  FROM marketplace_orders\nWHERE is_cancelled = false AND is_test_order = false\n\
+  GROUP BY seller_id"
+description: Platform net commission fee revenue divided by Gross Merchandise Value

@@ -1,0 +1,7 @@
+contract_id,customer_id,mrr_amount,contract_term_months,status,is_internal_account,billing_frequency
+CTR-101,ACME-CORP,5000.0,12,active,false,annual
+CTR-102,ACME-CORP,1000.0,12,active,false,annual
+CTR-103,BETA-LLC,12000.0,24,active,false,annual
+CTR-104,GAMMA-INC,2500.0,12,churned,false,monthly
+CTR-105,DELTA-INTERNAL,10000.0,12,active,true,annual
+CTR-106,EPSILON-CO,8000.0,12,active,false,annual

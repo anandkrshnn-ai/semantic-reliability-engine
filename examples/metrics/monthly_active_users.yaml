@@ -1,0 +1,20 @@
+metric: monthly_active_users
+description: Count of unique active users who performed at least one qualified event in the trailing 30 days
+owner: product_analytics
+grain: monthly
+dialect: snowflake
+tags:
+  - product_health
+  - core_engagement
+dimensions:
+  - platform
+  - organization_id
+sql: |
+  SELECT
+    organization_id,
+    COUNT(DISTINCT user_id) AS mau_count
+  FROM user_events
+  WHERE event_type IN ('login', 'api_call', 'file_export')
+    AND event_timestamp >= CURRENT_DATE - INTERVAL '30' DAY
+    AND is_bot = FALSE
+  GROUP BY organization_id

@@ -1,0 +1,16 @@
+metric: hospital_readmission_rate
+owner: clinical_quality
+grain: department
+invariants:
+  population:
+    required_filters:
+    - is_planned_readmission = false
+    - patient_deceased = false
+  grain:
+    required_dimensions:
+    - department
+sql: "SELECT\n  department,\n  SUM(CASE WHEN readmitted_30d = true THEN 1 ELSE 0 END)\
+  \ * 1.0 / COUNT(*) AS readmission_rate\nFROM hospital_discharges\nWHERE is_planned_readmission\
+  \ = false AND patient_deceased = false\nGROUP BY department"
+description: Percentage of discharged inpatients readmitted within 30 days excluding
+  planned procedures

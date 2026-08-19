@@ -1,0 +1,10 @@
+suite_name: semantic_hospital_readmission_rate
+assertions:
+- type: not_null
+  columns:
+  - department
+  - readmission_rate
+- type: metric_value
+  column: readmission_rate
+  min_value: 0.0
+  max_value: 1.0

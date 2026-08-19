@@ -1,0 +1,10 @@
+version: 2
+models:
+- name: model_hospital_readmission_rate
+  columns:
+  - name: department
+    tests:
+    - not_null
+  - name: readmission_rate
+    tests:
+    - not_null

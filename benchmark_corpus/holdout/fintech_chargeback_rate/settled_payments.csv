@@ -1,0 +1,7 @@
+payment_id,merchant_id,amount,is_disputed,is_sandbox,settlement_status
+PAY-01,MERCH-1,100.0,false,false,settled
+PAY-02,MERCH-1,250.0,true,false,settled
+PAY-03,MERCH-2,500.0,false,false,settled
+PAY-04,MERCH-2,1200.0,false,false,settled
+PAY-05,MERCH-3,80.0,true,false,settled
+PAY-06,MERCH-4,9999.0,true,true,settled

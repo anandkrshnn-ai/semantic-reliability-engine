@@ -1,0 +1,10 @@
+suite_name: semantic_cloud_compute_burn_rate
+assertions:
+- type: not_null
+  columns:
+  - team
+  - net_compute_cost
+- type: metric_value
+  column: net_compute_cost
+  expected: 1260.0
+  tolerance_pct: 5.0

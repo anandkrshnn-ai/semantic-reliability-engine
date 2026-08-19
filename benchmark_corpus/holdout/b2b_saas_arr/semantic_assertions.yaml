@@ -1,0 +1,16 @@
+suite_name: semantic_b2b_saas_arr
+assertions:
+- type: not_null
+  columns:
+  - customer_id
+  - annual_recurring_revenue
+- type: required_population
+  source_table: saas_contracts
+  required_filter: status = 'active'
+- type: required_population
+  source_table: saas_contracts
+  required_filter: is_internal_account = false
+- type: metric_value
+  column: annual_recurring_revenue
+  expected: 312000.0
+  tolerance_pct: 5.0

@@ -1,0 +1,13 @@
+metric: ad_campaign_roas
+owner: performance_marketing
+grain: channel
+invariants:
+  population:
+    required_filters:
+    - is_test_campaign = false
+  grain:
+    required_dimensions:
+    - channel
+sql: "SELECT\n  channel,\n  SUM(attributed_revenue) / SUM(ad_spend) AS roas\nFROM\
+  \ ad_campaign_performance\nWHERE is_test_campaign = false\nGROUP BY channel"
+description: Attributed conversion sales divided by gross media spend

@@ -1,0 +1,10 @@
+suite_name: semantic_ad_campaign_roas
+assertions:
+- type: not_null
+  columns:
+  - channel
+  - roas
+- type: metric_value
+  column: roas
+  min_value: 1.0
+  max_value: 10.0

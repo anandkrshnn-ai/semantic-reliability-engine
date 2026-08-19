@@ -1,0 +1,13 @@
+suite_name: semantic_monthly_active_users
+assertions:
+- type: not_null
+  columns:
+  - reporting_month
+  - active_users
+- type: required_population
+  source_table: user_logins
+  required_filter: is_bot = false
+  join_key: user_id
+- type: metric_value
+  column: active_users
+  expected: 3.0

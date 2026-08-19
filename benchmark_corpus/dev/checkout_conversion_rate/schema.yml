@@ -1,0 +1,7 @@
+version: 2
+models:
+- name: model_checkout_conversion_rate
+  columns:
+  - name: conversion_rate
+    tests:
+    - not_null

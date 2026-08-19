@@ -1,0 +1,14 @@
+suite_name: standard_dbt_tests
+description: Standard dbt checks (not_null, unique, row_count). Note how semantic filter/logic shifts pass these tests green.
+assertions:
+  - type: not_null
+    columns:
+      - customer_id
+      - reporting_month
+      - net_revenue
+  - type: unique_key
+    columns:
+      - customer_id
+      - reporting_month
+  - type: row_count_bounds
+    min_rows: 1

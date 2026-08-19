@@ -1,0 +1,10 @@
+version: 2
+models:
+- name: model_customer_churn_rate
+  columns:
+  - name: plan
+    tests:
+    - not_null
+  - name: churn_rate
+    tests:
+    - not_null

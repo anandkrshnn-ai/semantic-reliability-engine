@@ -1,0 +1,6 @@
+order_id,customer_id,order_date,order_amount,order_status,is_test
+O1,C1,2026-01-05,100.0,completed,false
+O2,C2,2026-01-06,200.0,completed,false
+O3,C3,2026-01-07,300.0,completed,false
+O4,C4,2026-01-08,500.0,cancelled,false
+O5,C5,2026-01-09,10000.0,completed,true

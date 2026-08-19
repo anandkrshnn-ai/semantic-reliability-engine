@@ -1,0 +1,15 @@
+metric: fintech_chargeback_rate
+owner: risk_compliance
+grain: merchant
+invariants:
+  population:
+    required_filters:
+    - is_sandbox = false
+    - settlement_status = 'settled'
+  grain:
+    required_dimensions:
+    - merchant_id
+sql: "SELECT\n  merchant_id,\n  SUM(CASE WHEN is_disputed = true THEN 1 ELSE 0 END)\
+  \ * 1.0 / COUNT(*) AS chargeback_rate\nFROM settled_payments\nWHERE is_sandbox =\
+  \ false AND settlement_status = 'settled'\nGROUP BY merchant_id"
+description: Proportion of settled transactions flagged as disputed or fraudulent

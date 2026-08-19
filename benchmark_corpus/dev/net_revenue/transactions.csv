@@ -1,0 +1,7 @@
+transaction_id,customer_id,transaction_date,amount,type,status,region,last_login
+T1,C1,2026-01-05 10:00:00,1000.0,invoice,active,NA,2026-08-01
+T2,C1,2026-01-12 11:30:00,200.0,refund,active,NA,2026-08-01
+T3,C2,2026-01-15 09:15:00,2500.0,invoice,active,NA,2026-08-10
+T4,C2,2026-01-20 14:00:00,500.0,refund,active,NA,2026-08-10
+T5,C3,2026-01-18 16:45:00,3000.0,invoice,pending,NA,2026-05-01
+T6,C4,2026-01-22 12:00:00,4500.0,invoice,active,EU,2026-08-12
