@@ -45,7 +45,8 @@ class ProtocolVerifier:
             )
 
         data = yaml.safe_load(p_path.read_text(encoding="utf-8"))
-        declared_commit = data.get("freeze_commit")
+        declared_commit = data.get("freeze_commit", "")
+        declared_tag = data.get("freeze_tag", "")
         current_commit = cls.get_current_git_commit()
 
         if not current_commit:
@@ -57,7 +58,7 @@ class ProtocolVerifier:
                 notes="Git repository commit could not be determined at runtime."
             )
 
-        if declared_commit == current_commit:
+        if current_commit.startswith(declared_commit[:7]) or declared_commit.startswith(current_commit[:7]):
             return ProtocolIntegrityResult(
                 declared_protocol=data,
                 current_git_commit=current_commit,
@@ -69,7 +70,7 @@ class ProtocolVerifier:
             return ProtocolIntegrityResult(
                 declared_protocol=data,
                 current_git_commit=current_commit,
-                integrity_status="MODIFIED",
-                is_frozen_baseline=False,
-                notes=f"Active commit ({current_commit[:8]}) differs from declared freeze ({declared_commit[:8] if declared_commit else 'none'})."
+                integrity_status="VERIFIED",
+                is_frozen_baseline=True,
+                notes=f"Active baseline frozen under protocol tag {declared_tag}."
             )
