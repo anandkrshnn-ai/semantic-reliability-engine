@@ -187,20 +187,20 @@ To enable zero-compute regression testing, SCOS-MCP records full agent execution
 \label{sec:results}
 
 \subsection{Completed Holdout Mutation Analysis}
-Prior to live model evaluation, we validated the SCOS invariant compiler on our development and frozen holdout corpora using denominator-precise AST chaos mutations across 5 mutation operators (Filter Drop, Boundary Shift, Aggregation Swap, Coalesce Bypass, Grain Drop).
+Prior to live model evaluation, we validated the SCOS invariant compiler on our development and frozen holdout corpora using denominator-precise AST chaos mutations across 5 mutation operators (Filter Drop, Boundary Shift, Aggregation Swap, Coalesce Bypass, Grain Drop). We report both pooled (micro-aggregated across all injected mutations) and macro-averaged (unweighted mean across metric models) catch rates.
 
 \begin{table}[ht!]
 \centering
 \small
-\begin{tabular}{lcccc}
+\begin{tabular}{lcccccc}
 \toprule
-\textbf{Corpus Split} & \textbf{Valid Mutations} & \textbf{Standard Structural Tests} & \textbf{SCOS Semantic Gate} & \textbf{Empirical Gain ($\Delta$)} \\
+\textbf{Corpus Track} & \textbf{Models} & \textbf{Valid Mutations} & \textbf{Standard Structural} & \textbf{SCOS Semantic} & \textbf{Pooled Gain ($\Delta_{\text{micro}}$)} & \textbf{Macro Gain ($\Delta_{\text{macro}}$)} \\
 \midrule
-Development Track ($n=8$) & 24 & 15.0\% (4/24) & \textbf{60.4\%} (16/24) & \textbf{+45.4 pp} \\
-Frozen Holdout Track ($n=6$) & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & \textbf{+61.1 pp} \\
+Development Track & 8 & 24 & 16.7\% (4/24) & \textbf{66.7\%} (16/24) & \textbf{+50.0 pp} & +45.4 pp (60.4\% vs 15.0\%) \\
+Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & \textbf{+61.1 pp} & +61.1 pp (61.1\% vs 0.0\%) \\
 \bottomrule
 \end{tabular}
-\caption{Completed offline mutation testing: Standard data quality suites (e.g., standard dbt unique/not\_null and schema linters) allow $\approx 85\text{--}100\%$ of semantic defects to survive silently, whereas SCOS AST invariant validation catches $61.1\%$ of injected semantic mutations (+61.1 percentage points over structural checks on the frozen holdout split).}
+\caption{Completed offline mutation testing: Standard structural data quality suites (e.g., standard dbt unique/not\_null and schema linters) allow $\approx 83\text{--}100\%$ of semantic defects to survive silently, whereas SCOS AST invariant validation catches $61.1\%$ of injected semantic mutations (+61.1 percentage points over structural checks on the frozen holdout split under both pooled and macro aggregations).}
 \label{tab:mutation_results}
 \end{table}
 
