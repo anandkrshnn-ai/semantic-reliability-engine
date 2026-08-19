@@ -240,12 +240,15 @@ To maintain scientific and operational integrity, enterprise deployers must note
 
 ---
 
-## Appendix A: Initial Empirical Measurements (Phase 12.4 Frozen Evaluation)
+## Appendix A: Protocol Verification & Scaffolding Benchmark Run
+
+> **Scientific Transparency Note:** The measurements below represent the **baseline testbed verification** of the SCOS evaluation protocol across $N=120$ paired rollouts, confirming that the governance harness intercept unanchored queries and enforces appropriate abstention. Live frontier LLM evaluations (e.g. GPT-4o / Claude 3.5 Sonnet) utilize this exact protocol via the provider-backed `--provider` CLI adapter.
 
 **Run Protocol Metadata:**
 ```json
 {
   "protocol_version": "12.4.0",
+  "run_mode": "SYNTHETIC_SCAFFOLDING_VERIFICATION",
   "scenario_corpus": "frozen_20_scenarios",
   "scenarios_count": 20,
   "rollouts_per_condition": 3,

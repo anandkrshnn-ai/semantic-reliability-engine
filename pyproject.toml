@@ -33,6 +33,10 @@ dev = [
 semantic-reliability = "semantic_reliability.cli:main"
 sre = "semantic_reliability.cli:main"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["semantic_reliability*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

@@ -69,8 +69,11 @@ python demo/agent.py
 
 ### 5. Run Live Agent Benchmark & Trajectory Replay
 ```bash
-# Run paired blind vs. governed evaluation (3 stochastic rollouts)
-sre benchmark-live --rollouts 3 --output benchmark_scorecard.json --trajectories-out runs/trajectories.jsonl
+# Run paired evaluation with an LLM provider (OpenAI, Anthropic, Ollama, or mock scaffolding)
+sre benchmark-live --provider mock --rollouts 3 --output benchmark_scorecard.json --trajectories-out runs/trajectories.jsonl
+
+# Or with a real model endpoint:
+# sre benchmark-live --provider openai --model gpt-4o --rollouts 3
 
 # Zero-compute offline trajectory replay against updated contracts
 sre benchmark-replay --trajectories runs/trajectories.jsonl --contracts benchmark_corpus --output replay_scorecard.json

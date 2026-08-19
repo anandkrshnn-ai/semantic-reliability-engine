@@ -254,27 +254,27 @@ Frozen Holdout Track & 6 & 18 & 0.0\% (0/18) & \textbf{61.1\%} (11/18) & 0.0\% &
 \label{tab:per_model_audit}
 \end{table}
 
-\subsection{Phase 12.4 Trajectory Evaluation}
-We executed the frozen 20-scenario benchmark suite across paired Blind and Governed conditions with $K=3$ stochastic rollouts ($N=120$ total evaluations).
+\subsection{Trajectory Evaluation Protocol \& Scaffolding Harness}
+To evaluate runtime agent loops, we implemented a 20-scenario trajectory evaluation protocol across 4 scenario classes (CLEAR\_CONTRACT, AMBIGUOUS\_METRIC, MISSING\_CONTRACT, CONTRACT\_CONFLICT). 
+
+Table~\ref{tab:empirical_scorecard} reports the baseline evaluation harness behavior across paired Blind (deterministic unanchored query baseline) and Governed (SCOS-MCP tool-calling loop) arms over $K=3$ rollouts ($N=120$ total evaluations). In this scaffolding verification run, the harness verifies that the MCP tool loop successfully intercept unanchored queries and enforces appropriate abstention when contracts are missing or conflicting. Live frontier LLM evaluations (e.g., GPT-4o, Claude 3.5 Sonnet) utilize this exact protocol via the provider-backed adapter.
 
 \begin{table}[ht!]
 \centering
 \small
 \begin{tabular}{lccc}
 \toprule
-\textbf{Evaluation Metric} & \textbf{Blind Baseline ($N=60$)} & \textbf{Governed SCOS-MCP ($N=60$)} & \textbf{Empirical Lift ($\Delta$)} \\
+\textbf{Evaluation Metric} & \textbf{Blind Baseline ($N=60$)} & \textbf{Governed SCOS-MCP ($N=60$)} & \textbf{Harness Lift ($\Delta$)} \\
 \midrule
 Contract Compliance Rate & 0.0\% (0/60) & \textbf{40.0\%} (24/60) & \textbf{+40.0\%} \\
 Appropriate Abstention Rate & 0.0\% (0/36) & \textbf{100.0\%} (36/36) & \textbf{+100.0\%} \\
 Total Governed Success Rate & 0.0\% (0/60) & \textbf{100.0\%} (60/60) & \textbf{+100.0\%} \\
 Unsafe Query Rate ($UQR$) & 100.0\% (60/60) & \textbf{0.0\%} (0/60) & \textbf{-100.0\%} \\
 Mean Tool Invocations & 0.0 & $1.40 \pm 0.49$ & +1.40 \\
-P50 / P95 Latency (ms) & 150.0 / 150.0 & 0.02 / 1.16 & -149.98 / -148.84 \\
-Mean Estimated Cost (\$) & \$0.0500 & \$0.0100 & -\$0.0400 \\
 \textbf{Net Governance Benefit ($NGB$)} & — & — & \textbf{+0.0349} \\
 \bottomrule
 \end{tabular}
-\caption{Measured performance across 20 frozen benchmark scenarios. Governed SCOS-MCP eliminates unsafe query generation while achieving 100\% appropriate abstention on ambiguous, missing, or conflicting prompts.}
+\caption{Protocol verification across 20 frozen benchmark scenarios in the scaffolding evaluation harness, verifying that the MCP governance loop successfully enforces contract constraints and appropriate abstention.}
 \label{tab:empirical_scorecard}
 \end{table}
 
@@ -282,10 +282,10 @@ Mean Estimated Cost (\$) & \$0.0500 & \$0.0100 & -\$0.0400 \\
 \label{sec:threats}
 
 \begin{enumerate}[noitemsep]
-    \item \textbf{Contract Completeness:} SRE validates queries strictly against declared invariants. Business rules omitted from the SCOS YAML cannot be enforced.
-    \item \textbf{Synthetic Fixture Equivalence:} Result agreement on synthetic DuckDB tables does not guarantee global equivalence across massive production databases with long-tail distributions.
-    \item \textbf{Statistical vs. Causal Signals:} Reality probes indicate statistical divergence, not root-cause pipeline corruption.
-    \item \textbf{Live Model Variance:} Performance is tied to specific model versions, prompts, and inference temperatures.
+    \item \textbf{AST Normalization vs. Semantic Equivalence:} SCOS validates queries by parsing SQL into normalized AST expressions and checking for required conjuncts and grain clauses using \texttt{sqlglot}. While this handles syntactic commutativity, redundant parentheses, and alias resolution, it does not solve general semantic equivalence (e.g., recognizing that \texttt{status != 'inactive'} may express \texttt{status = 'active'} under binary domain assumptions).
+    \item \textbf{Audit Authentication Model:} Periodic checkpoints employ an HMAC-SHA256 message authentication envelope. This detects in-transit tampering given a shared secret, but does not provide non-repudiation or asymmetric public-key signatures unless integrated with enterprise KMS or PKI infrastructures.
+    \item \textbf{Contract Completeness:} SRE validates queries strictly against declared invariants. Business rules omitted from the SCOS YAML contract cannot be enforced by the AST compiler.
+    \item \textbf{Synthetic Fixture Equivalence:} Result agreement on synthetic DuckDB tables does not guarantee global equivalence across massive production databases with long-tail data distributions.
 \end{enumerate}
 
 \section{Reproducibility \& Artifact Availability}

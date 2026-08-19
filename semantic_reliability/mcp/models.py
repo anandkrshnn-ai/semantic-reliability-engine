@@ -83,7 +83,7 @@ class McpAuditEvent(BaseModel):
 
 
 class AuditCheckpoint(BaseModel):
-    """Cryptographically anchored periodic checkpoint over the audit hash chain."""
+    """Cryptographically anchored periodic checkpoint over the audit hash chain using HMAC-SHA256."""
     checkpoint_id: str
     sequence_end: int
     last_event_hash: str
@@ -92,9 +92,16 @@ class AuditCheckpoint(BaseModel):
     total_events_verified: int = 0
     checkpoint_signature: str = ""
 
-    def compute_signature(self, signing_key: str = "sre-audit-signing-secret") -> str:
-        payload = f"{self.checkpoint_id}:{self.sequence_end}:{self.last_event_hash}:{self.checkpoint_timestamp}:{self.key_id}:{signing_key}"
-        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    def compute_signature(self, signing_key: Optional[str] = None) -> str:
+        """Computes HMAC-SHA256 message authentication code over checkpoint envelope."""
+        import hmac
+        import os
+        key = signing_key or os.environ.get("SRE_AUDIT_SIGNING_KEY", "sre-audit-signing-secret")
+        canonical_payload = (
+            f"{self.checkpoint_id}:{self.sequence_end}:{self.last_event_hash}:"
+            f"{self.checkpoint_timestamp}:{self.key_id}"
+        )
+        return hmac.new(key.encode("utf-8"), canonical_payload.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 class SqlValidationResult(BaseModel):

@@ -853,10 +853,13 @@ def benchmark_replay(trajectories, contracts, artifacts_dir, output):
 @click.option("--output", default="benchmark_scorecard.json", help="Path for output scorecard JSON")
 @click.option("--trajectories-out", default="runs/trajectories.jsonl", help="Path for exported JSONL trajectories")
 @click.option("--artifacts-dir", default="artifacts/benchmark", help="Local directory to store raw SQL artifacts")
-@click.option("--model", default="mock-governed-live", help="Model identifier")
+@click.option("--provider", default="mock", help="LLM Provider: mock, openai, anthropic, ollama, vllm")
+@click.option("--model", default="gpt-4o", help="Model identifier (e.g. gpt-4o, claude-3-5-sonnet, llama3)")
+@click.option("--api-key", default=None, help="API key for LLM provider (or via env var)")
+@click.option("--api-base", default=None, help="Base URL for LLM endpoint")
 @click.option("--rollouts", default=3, help="Number of rollouts per scenario per condition")
-def benchmark_live(contracts, output, trajectories_out, artifacts_dir, model, rollouts):
-    """Run live agent benchmark with paired blind & governed conditions across stochastic rollouts."""
+def benchmark_live(contracts, output, trajectories_out, artifacts_dir, provider, model, api_key, api_base, rollouts):
+    """Run agent benchmark with paired blind & governed conditions across stochastic rollouts."""
     import duckdb
     from semantic_reliability.benchmark.protocol import FrozenProtocolConfig, NetGovernancePolicy
     from semantic_reliability.benchmark.scenarios import SCENARIOS
@@ -864,9 +867,24 @@ def benchmark_live(contracts, output, trajectories_out, artifacts_dir, model, ro
     from semantic_reliability.benchmark.oracle import OracleValidator
     from semantic_reliability.benchmark.evaluator import BenchmarkEvaluator
     from semantic_reliability.benchmark.replay import export_trajectories
+    from semantic_reliability.benchmark.llm_client import LiveLLMClient
     from semantic_reliability.mcp.handlers import ScosMcpHandlers
     from semantic_reliability.firewall.engine import ContractRegistry
     from semantic_reliability.compiler.compiler import MetricCompiler
+
+    is_synthetic = provider.lower() == "mock"
+
+    if is_synthetic:
+        console.print(Panel(
+            "[bold yellow]⚠️ RUNNING IN SYNTHETIC SCAFFOLDING / SIMULATION MODE[/bold yellow]\n"
+            "[dim]No external LLM provider was configured. The run evaluates the benchmark evaluation harness, "
+            "oracle logic, and trajectory replay loop rather than a live model checkpoint.[/dim]\n"
+            "To evaluate a live model, specify [cyan]--provider openai|anthropic|ollama --model <model_id>[/cyan].",
+            title="[bold yellow]🧪 SCOS Benchmark Harness[/bold yellow]",
+            border_style="yellow",
+        ))
+    else:
+        console.print(f"[bold green]🚀 Running live benchmark with provider:[/bold green] {provider} (Model: {model})")
 
     registry = ContractRegistry()
     c_path = Path(contracts)
@@ -880,7 +898,9 @@ def benchmark_live(contracts, output, trajectories_out, artifacts_dir, model, ro
 
     handlers = ScosMcpHandlers(registry=registry)
     cfg = FrozenProtocolConfig(model_id=model, num_rollouts=rollouts)
-    gov_adapter = LiveGovernedAgentAdapter(config=cfg, mcp_handlers=handlers)
+
+    model_fn = None if is_synthetic else LiveLLMClient(provider=provider, model=model, api_key=api_key, api_base=api_base)
+    gov_adapter = LiveGovernedAgentAdapter(config=cfg, mcp_handlers=handlers, model_fn=model_fn)
     blind_adapter = DeterministicBaselineAdapter(model_id=f"{model}-blind")
     conn = duckdb.connect(":memory:")
     oracle = OracleValidator(conn=conn, registry=registry)
@@ -911,6 +931,9 @@ def benchmark_live(contracts, output, trajectories_out, artifacts_dir, model, ro
 
     # Calculate scorecard
     scorecard = evaluator.compute_scorecard(blind_trajectories, gov_trajectories)
+    scorecard["run_mode"] = "SYNTHETIC_SIMULATION" if is_synthetic else "LIVE_MODEL_EVALUATION"
+    scorecard["provider"] = provider
+    scorecard["model"] = model
 
     out_p = Path(output)
     out_p.parent.mkdir(parents=True, exist_ok=True)
@@ -920,10 +943,11 @@ def benchmark_live(contracts, output, trajectories_out, artifacts_dir, model, ro
     all_trajs = blind_trajectories + gov_trajectories
     export_trajectories(all_trajs, trajectories_out, raw_artifacts_dir=artifacts_dir)
 
-    click.echo(f"✅ Benchmark live run complete ({rollouts} rollouts x {len(SCENARIOS)} scenarios).")
-    click.echo(f"Scorecard written to {output}")
-    click.echo(f"Semantic Lift: {scorecard.get('semantic_lift', 0.0) * 100:.1f}%")
-    click.echo(f"Net Governance Benefit: {scorecard.get('net_governance_benefit', 0.0):.4f}")
+    console.print(f"[bold green]Benchmark live run complete:[/bold green] {rollouts} rollouts x {len(SCENARIOS)} scenarios.")
+    console.print(f"Scorecard written to: {output}")
+    console.print(f"Run Mode: [cyan]{scorecard['run_mode']}[/cyan]")
+    console.print(f"Semantic Lift: [bold]{scorecard.get('semantic_lift', 0.0) * 100:.1f}%[/bold]")
+    console.print(f"Net Governance Benefit: [bold]{scorecard.get('net_governance_benefit', 0.0):.4f}[/bold]")
 
 
 if __name__ == "__main__":
