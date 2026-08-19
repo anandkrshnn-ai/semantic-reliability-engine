@@ -1,17 +1,39 @@
 {
-  "blind_baseline": {},
-  "governed_mcp": {
-    "total_scenarios": 4,
+  "blind_baseline": {
+    "total_evaluations": 12,
     "execution_success": 0.0,
-    "contract_compliance": 0.25,
+    "execution_success_rate": 0.0,
+    "contract_compliance": 0.5,
+    "contract_compliance_rate": 0.5,
     "result_correctness": 0.0,
+    "result_correctness_rate": 0.0,
     "unsafe_query_rate": 0.0,
-    "abstention_rate": 0.25,
-    "mean_tool_calls": 1.75,
-    "p95_latency_ms": 1.26,
-    "mean_estimated_cost": 0.01
+    "abstention_rate": 0.0,
+    "appropriate_abstention_rate": 0.0,
+    "ceiling_reached_rate": 0.0,
+    "mean_tool_calls": 0.0,
+    "p50_latency_ms": 150.0,
+    "p95_latency_ms": 150.0,
+    "mean_estimated_cost_usd": 0.05
   },
-  "semantic_lift": 0.25,
-  "net_governance_benefit": -0.0551,
+  "governed_mcp": {
+    "total_evaluations": 12,
+    "execution_success": 0.0,
+    "execution_success_rate": 0.0,
+    "contract_compliance": 0.0,
+    "contract_compliance_rate": 0.0,
+    "result_correctness": 0.0,
+    "result_correctness_rate": 0.0,
+    "unsafe_query_rate": 0.0,
+    "abstention_rate": 0.5,
+    "appropriate_abstention_rate": 0.5,
+    "ceiling_reached_rate": 0.0,
+    "mean_tool_calls": 1.5,
+    "p50_latency_ms": 0.02,
+    "p95_latency_ms": 0.96,
+    "mean_estimated_cost_usd": 0.01
+  },
+  "semantic_lift": -0.5,
+  "net_governance_benefit": 0.0349,
   "policy_version": "1.0.0"
 }

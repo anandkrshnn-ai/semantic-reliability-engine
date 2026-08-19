@@ -849,15 +849,19 @@ def benchmark_replay(trajectories, contracts, output):
 @main.command(name="benchmark-live")
 @click.option("--contracts", default="benchmark_corpus", help="Path to SCOS contracts directory")
 @click.option("--output", default="benchmark_scorecard.json", help="Path for output scorecard JSON")
+@click.option("--trajectories-out", default="runs/trajectories.jsonl", help="Path for exported JSONL trajectories")
+@click.option("--artifacts-dir", default="artifacts/benchmark", help="Local directory to store raw SQL artifacts")
 @click.option("--model", default="mock-governed-live", help="Model identifier")
-def benchmark_live(contracts, output, model):
-    """Run live agent benchmark against SCOS MCP handlers and frozen scenarios."""
+@click.option("--rollouts", default=3, help="Number of rollouts per scenario per condition")
+def benchmark_live(contracts, output, trajectories_out, artifacts_dir, model, rollouts):
+    """Run live agent benchmark with paired blind & governed conditions across stochastic rollouts."""
     import duckdb
     from semantic_reliability.benchmark.protocol import FrozenProtocolConfig, NetGovernancePolicy
     from semantic_reliability.benchmark.scenarios import SCENARIOS
-    from semantic_reliability.benchmark.adapters import LiveGovernedAgentAdapter
+    from semantic_reliability.benchmark.adapters import LiveGovernedAgentAdapter, DeterministicBaselineAdapter
     from semantic_reliability.benchmark.oracle import OracleValidator
     from semantic_reliability.benchmark.evaluator import BenchmarkEvaluator
+    from semantic_reliability.benchmark.replay import export_trajectories
     from semantic_reliability.mcp.handlers import ScosMcpHandlers
     from semantic_reliability.firewall.engine import ContractRegistry
     from semantic_reliability.compiler.compiler import MetricCompiler
@@ -873,36 +877,56 @@ def benchmark_live(contracts, output, model):
                 pass
 
     handlers = ScosMcpHandlers(registry=registry)
-    cfg = FrozenProtocolConfig(model_id=model)
-    adapter = LiveGovernedAgentAdapter(config=cfg, mcp_handlers=handlers)
+    cfg = FrozenProtocolConfig(model_id=model, num_rollouts=rollouts)
+    gov_adapter = LiveGovernedAgentAdapter(config=cfg, mcp_handlers=handlers)
+    blind_adapter = DeterministicBaselineAdapter(model_id=f"{model}-blind")
     conn = duckdb.connect(":memory:")
     oracle = OracleValidator(conn=conn, registry=registry)
     evaluator = BenchmarkEvaluator(policy=NetGovernancePolicy())
 
     gov_trajectories = []
-    for scenario in SCENARIOS:
-        traj = adapter.run(scenario)
-        if traj.final_sql_raw:
-            eval_res = oracle.evaluate_agent_sql(traj.final_sql_raw, scenario)
-            traj.execution_success = eval_res["execution_success"]
-            traj.contract_compliant = eval_res["contract_compliant"]
-            traj.result_correct = eval_res["result_correct"]
-        gov_trajectories.append(traj)
+    blind_trajectories = []
+
+    for rollout_idx in range(rollouts):
+        for scenario in SCENARIOS:
+            # 1. Blind condition rollout
+            b_traj = blind_adapter.run(scenario, rollout_idx=rollout_idx)
+            if b_traj.final_sql_raw:
+                eval_res = oracle.evaluate_agent_sql(b_traj.final_sql_raw, scenario)
+                b_traj.execution_success = eval_res["execution_success"]
+                b_traj.contract_compliant = eval_res["contract_compliant"]
+                b_traj.result_correct = eval_res["result_correct"]
+            blind_trajectories.append(b_traj)
+
+            # 2. Governed condition rollout
+            g_traj = gov_adapter.run(scenario, rollout_idx=rollout_idx)
+            if g_traj.final_sql_raw:
+                eval_res = oracle.evaluate_agent_sql(g_traj.final_sql_raw, scenario)
+                g_traj.execution_success = eval_res["execution_success"]
+                g_traj.contract_compliant = eval_res["contract_compliant"]
+                g_traj.result_correct = eval_res["result_correct"]
+            gov_trajectories.append(g_traj)
 
     # Calculate scorecard
-    scorecard = evaluator.compute_scorecard([], gov_trajectories)
+    scorecard = evaluator.compute_scorecard(blind_trajectories, gov_trajectories)
 
     out_p = Path(output)
     out_p.parent.mkdir(parents=True, exist_ok=True)
     out_p.write_text(json.dumps(scorecard, indent=2), encoding="utf-8")
 
-    click.echo(f"✅ Benchmark live run complete. Evaluated {len(gov_trajectories)} scenarios.")
+    # Export trajectories with privacy redaction and local artifact preservation
+    all_trajs = blind_trajectories + gov_trajectories
+    export_trajectories(all_trajs, trajectories_out, raw_artifacts_dir=artifacts_dir)
+
+    click.echo(f"✅ Benchmark live run complete ({rollouts} rollouts x {len(SCENARIOS)} scenarios).")
     click.echo(f"Scorecard written to {output}")
-    click.echo(f"Governed Compliance: {scorecard.get('governed_mcp', {}).get('contract_compliance', 0.0) * 100:.1f}%")
+    click.echo(f"Semantic Lift: {scorecard.get('semantic_lift', 0.0) * 100:.1f}%")
+    click.echo(f"Net Governance Benefit: {scorecard.get('net_governance_benefit', 0.0):.4f}")
 
 
 if __name__ == "__main__":
     main()
+
 
 
 

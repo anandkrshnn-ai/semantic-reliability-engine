@@ -1,0 +1,1 @@
+SELECT customer_id, SUM(base_fee - discount) AS mrr FROM subscriptions WHERE status = 'active' GROUP BY 1

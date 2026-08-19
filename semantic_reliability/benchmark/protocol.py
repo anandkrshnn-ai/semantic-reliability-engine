@@ -1,4 +1,4 @@
-"""Protocol and trajectory data models for Phase 12.1 Agent Evaluation Harness."""
+"""Protocol and trajectory data models for Phase 12.3 & 12.4 Agent Evaluation Harness."""
 import hashlib
 from typing import Literal, Optional, List, Dict, Any
 from enum import Enum
@@ -33,6 +33,18 @@ class ToolCallRecord(BaseModel):
     latency_ms: float = 0.0
 
 
+class TrajectoryMetadata(BaseModel):
+    """Comprehensive execution metadata for reproducibility."""
+    provider: str = "openai"
+    model_snapshot: str = "gpt-4o-2024-08-06"
+    system_prompt_hash: str = ""
+    tool_schema_hash: str = ""
+    temperature: float = 0.0
+    seed: Optional[int] = 42
+    backend_fingerprint: str = "sre-v1.0.0-duckdb"
+    rollout_index: int = 0
+
+
 class AgentTrajectory(BaseModel):
     """Complete, auditable record of an agent's reasoning and execution path."""
     scenario_id: str
@@ -47,9 +59,12 @@ class AgentTrajectory(BaseModel):
     contract_compliant: bool = False
     result_correct: bool = False
     abstained: bool = False
+    appropriate_abstention: bool = False
+    ceiling_reached: bool = False
     latency_ms: float = 0.0
     estimated_cost_usd: Optional[float] = None
     audit_chain_verified: bool = True
+    metadata: TrajectoryMetadata = Field(default_factory=TrajectoryMetadata)
 
     def redact_for_export(self) -> Dict[str, Any]:
         """Returns a safe dictionary for JSONL export, stripping raw SQL."""
@@ -68,12 +83,13 @@ class NetGovernancePolicy(BaseModel):
 
 class FrozenProtocolConfig(BaseModel):
     """Ensures exact reproducibility of a benchmark run."""
-    protocol_version: str = "12.1.0"
+    protocol_version: str = "12.4.0"
     scenario_commit: str = "main"
     contract_commit: str = "main"
-    model_id: str = "base-model"
+    model_id: str = "gpt-4o"
     temperature: float = 0.0
     max_tool_calls: int = 5
     max_iterations: int = 3
+    num_rollouts: int = 3
     fixture_version: str = "v1.0"
     policy_version: str = "1.0.0"

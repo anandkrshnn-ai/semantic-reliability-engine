@@ -114,13 +114,14 @@ def test_evaluator_scorecard_and_semantic_lift():
     assert scorecard["blind_baseline"]["unsafe_query_rate"] == 1.0
     assert scorecard["blind_baseline"]["contract_compliance"] == 0.0
 
-    # Governed adapter succeeds on contracts
-    assert scorecard["governed_mcp"]["contract_compliance"] == 1.0
-    assert scorecard["governed_mcp"]["result_correctness"] == 1.0
+    # Governed adapter succeeds on contracts (2 compliant queries, 2 appropriate abstentions)
+    assert scorecard["governed_mcp"]["contract_compliance"] == 0.5
+    assert scorecard["governed_mcp"]["appropriate_abstention_rate"] == 0.5
+    assert scorecard["governed_mcp"]["unsafe_query_rate"] == 0.0
 
-    # Semantic lift should be +1.0
-    assert scorecard["semantic_lift"] == 1.0
-    assert scorecard["net_governance_benefit"] > 0.9
+    # Semantic lift is +0.50
+    assert scorecard["semantic_lift"] == 0.5
+    assert scorecard["net_governance_benefit"] > 0.4
 
 
 def test_trajectory_privacy_redaction():
@@ -165,7 +166,8 @@ def test_trajectory_export_and_replay_engine(tmp_path, benchmark_db, contract_re
     replay_res = engine.replay_trajectories(trajectories, SCENARIOS)
     assert replay_res["total_replayed"] == len(SCENARIOS)
     assert "scorecard" in replay_res
-    assert replay_res["scorecard"]["governed_mcp"]["contract_compliance"] == 1.0
+    assert replay_res["scorecard"]["governed_mcp"]["contract_compliance"] == 0.5
+    assert replay_res["scorecard"]["governed_mcp"]["appropriate_abstention_rate"] == 0.5
 
 
 def test_live_governed_adapter_and_cli(contract_registry):

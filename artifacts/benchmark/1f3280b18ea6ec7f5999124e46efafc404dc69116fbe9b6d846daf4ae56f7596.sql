@@ -1,0 +1,1 @@
+SELECT customer_id, SUM(amount) AS net_revenue FROM transactions GROUP BY 1
