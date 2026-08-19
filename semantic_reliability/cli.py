@@ -786,6 +786,28 @@ def dbt_check(manifest, model, contract, fail_on, output_json, output_sarif):
     sys.exit(0)
 
 
+@main.command(name="mcp-serve")
+@click.option("--contracts", default="benchmark_corpus", help="Path to SCOS contracts directory")
+def mcp_serve(contracts):
+    """Start the standard JSON-RPC 2.0 SCOS Model Context Protocol (MCP) Server."""
+    from semantic_reliability.mcp.server import ScosMcpServer
+    from semantic_reliability.firewall.engine import ContractRegistry
+
+    registry = ContractRegistry()
+    c_path = Path(contracts)
+    if c_path.exists():
+        for y_path in c_path.rglob("*.yaml"):
+            try:
+                from semantic_reliability.compiler.compiler import MetricCompiler
+                comp = MetricCompiler.from_yaml_file(y_path)
+                registry.register(comp.definition)
+            except Exception:
+                pass
+
+    server = ScosMcpServer(registry=registry)
+    server.run_stdio()
+
+
 if __name__ == "__main__":
     main()
 
