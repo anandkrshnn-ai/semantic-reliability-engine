@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-agent-with-firewall
+  namespace: analytics
+  labels:
+    app.kubernetes.io/name: analytics-agent
+    app.kubernetes.io/part-of: semantic-reliability-engine
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: analytics-agent
+  template:
+    metadata:
+      labels:
+        app: analytics-agent
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        # 1. Primary AI / Text-to-SQL Agent Service
+        - name: text2sql-agent
+          image: ghcr.io/company/text2sql-agent:v2.1.0
+          env:
+            - name: SRE_FIREWALL_URL
+              value: "http://127.0.0.1:8080/evaluate"
+          ports:
+            - containerPort: 3000
+              name: http
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+
+        # 2. SRE Semantic Firewall Sidecar Proxy
+        - name: sre-semantic-firewall
+          image: ghcr.io/anandkrshnn-ai/semantic-reliability-engine:v1.0.0
+          command: ["uvicorn", "semantic_reliability.firewall.main:app", "--host", "0.0.0.0", "--port", "8080"]
+          env:
+            - name: SRE_STRICT_MODE
+              value: "false" # Set to 'false' for 30-day AUDIT mode, 'true' for hard DENY
+            - name: SRE_CONTRACTS_DIR
+              value: "/etc/sre/contracts"
+          ports:
+            - containerPort: 8080
+              name: firewall-http
+          volumeMounts:
+            - name: metric-contracts-vol
+              mountPath: /etc/sre/contracts
+              readOnly: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+      volumes:
+        - name: metric-contracts-vol
+          configMap:
+            name: sre-metric-contracts
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sre-metric-contracts
+  namespace: analytics
+data:
+  net_revenue.yaml: |
+    metric: net_revenue
+    version: "1.0.0"
+    owner: finance
+    grain: customer_month
+    sql: "SELECT customer_id, SUM(amount) AS net_revenue FROM transactions WHERE status = 'active' GROUP BY customer_id"
+    invariants:
+      population:
+        required_filters:
+          - "status = 'active'"
+      grain:
+        required_dimensions:
+          - customer_id
+      aggregation:
+        required_function: "SUM"
