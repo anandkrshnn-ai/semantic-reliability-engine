@@ -1,13 +1,13 @@
-# Semantic Reliability Engine (SRE) & SCOS-MCP
+# Semantic-SQL-Bench & SCOS Reference Framework
 
 [![CI](https://github.com/anandkrshnn-ai/semantic-reliability-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/anandkrshnn-ai/semantic-reliability-engine/actions)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Specification: SCOS v1.0](https://img.shields.io/badge/spec-SCOS_v1.0-green.svg)](spec/SCOS_V1_SPECIFICATION.md)
 
-**Contract-Grounded Evaluation and Runtime Semantic Guardrails for Business Text-to-SQL AI Agents.**
+**Adversarial Benchmark for Business-Semantic Correctness in Text-to-SQL AI Agents.**
 
-> *An AI-assisted research prototype for contract-grounded SQL mutation testing and semantic validation. Its frozen-corpus mutation results are reproducible against a minimal structural baseline; broader baseline comparisons, live-agent evaluation, production integrations, licensing, and security claims remain to be completed.*
+> *An AI-assisted research prototype evaluating business-semantic correctness in AI-generated SQL. Its frozen-corpus mutation results are reproducible against a minimal structural baseline; broader baseline comparisons, live-agent evaluation, production integrations, and security claims remain active research directions.*
 
 ---
 
@@ -15,32 +15,29 @@
 
 Autonomous AI agents generate syntactically valid SQL that executes cleanly on warehouse engines (BigQuery, Snowflake, Databricks, DuckDB), yet **violates core business definitions** (e.g., dropping required active-cohort filters, omitting refund deductions, or miscalculating financial grain).
 
-Standard out-of-the-box structural data quality tests (`not_null`, `unique`, `row_count_bounds`) verify table shapes and nullity, but cannot detect when dynamic SQL logic drops domain arithmetic. SCOS defines declarative AST invariant contracts to catch these semantic regressions automatically.
-
-> **Research Prototype Notice:** SCOS detects more injected semantic mutations than the specified minimal structural baseline on the frozen 14-contract corpus. The `gym` and `adapters` packages are experimental research modules.
+Standard out-of-the-box structural data quality tests (`not_null`, `unique`, `row_count_bounds`) verify table shapes and nullity, but cannot detect when dynamic SQL logic drops domain arithmetic. **Semantic-SQL-Bench** evaluates agents against explicit, contract-grounded business invariants.
 
 ---
 
-## 🏗️ Architecture Overview
+## 🏗️ Architecture & Conceptual Split
 
 ```text
-                               ┌────────────────────────┐
-                               │   SCOS YAML Contract   │
-                               │ (Invariants & Probes)  │
-                               └───────────┬────────────┘
-                                           │
-             ┌─────────────────────────────┼─────────────────────────────┐
-             ▼                             ▼                             ▼
-   ┌───────────────────┐         ┌───────────────────┐         ┌───────────────────┐
-   │ SCOS AST Compiler │         │   Read-Only MCP   │         │ Trajectory Replay │
-   │  & Normalization  │         │    Server 2.0     │         │ & Evaluator Gate  │
-   └─────────┬─────────┘         └─────────┬─────────┘         └─────────┬─────────┘
-             │                             │                             │
-             ▼                             ▼                             ▼
-   ┌───────────────────┐         ┌───────────────────┐         ┌───────────────────┐
-   │  dbt & CI/CD Gate │         │ AI Agent (Claude/ │         │ Tamper-Evident    │
-   │ (SARIF Reporting) │         │  GPT-4 / Llama)   │         │ Hash-Chain Audit  │
-   └───────────────────┘         └───────────────────┘         └───────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Semantic-SQL-Bench                                │
+│  - 14-Contract Corpus (Dev: n=8, Frozen Holdout: n=6)                       │
+│  - 5 AST Mutation Chaos Operators (Filter Drop, Grain Shift, Agg Swap...)    │
+│  - DuckDB Ground-Truth Fixture Execution Oracles                            │
+│  - 20-Scenario Trajectory Evaluation Protocol & Replay Engine               │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+            ┌──────────────────────────┴──────────────────────────┐
+            ▼                                                     ▼
+┌───────────────────────────────┐     ┌───────────────────────────────────────┐
+│     SCOS Specification        │     │       SCOS Reference Engine           │
+│  - Declarative YAML Schema    │     │  - sqlglot AST Invariant Normalizer   │
+│  - Mathematical Invariant Grammar│  │  - Read-Only SCOS MCP Server 2.0      │
+│  - Portable JSON Schema v1.0  │     │  - Static Pre-flight Linting vs Engine│
+└───────────────────────────────┘     └───────────────────────────────────────┘
 ```
 
 ---

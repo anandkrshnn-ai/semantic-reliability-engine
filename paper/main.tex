@@ -27,9 +27,7 @@
   commentstyle=\color{green!60!black},
   stringstyle=\color{red!70!black},
   showstringspaces=false
-}
-
-\title{\textbf{SCOS-MCP: Contract-Grounded Evaluation and Runtime Guardrails for Business-Semantic Text-to-SQL Agents}}
+\title{\textbf{Semantic-SQL-Bench: Adversarial Evaluation and Contract-Grounded Oracles for Business-Semantic Correctness in Text-to-SQL AI Agents}}
 
 \author{
   \textbf{Anandakrishnan Damodaran} \\
@@ -44,9 +42,9 @@
 \maketitle
 
 \begin{abstract}
-While modern Large Language Model (LLM) agents generate syntactically valid and executable SQL queries with high reliability on standard benchmarks (e.g., Spider, BIRD), enterprise deployments frequently suffer from \textit{silent semantic failures}: queries that execute cleanly on warehouse engines but fundamentally violate organizational business definitions (e.g., dropping required active-cohort filters, omitting negative return components, or collapsing aggregation grain). Traditional data quality tests and schema linters validate output integrity and syntactic conformity, but cannot detect when an agent hallucinates unanchored domain logic. 
+While modern Large Language Model (LLM) agents generate syntactically valid and executable SQL queries with high reliability on standard benchmarks (e.g., Spider, BIRD), enterprise deployments frequently suffer from \textit{silent semantic failures}: queries that execute cleanly on warehouse engines but fundamentally violate organizational business definitions (e.g., dropping required active-cohort filters, omitting negative return components, or collapsing aggregation grain). Traditional execution accuracy benchmarks evaluate result-set equivalence on static toy databases, failing to evaluate adherence to explicit business invariants across changing data distributions.
 
-In this work, we present \textbf{SCOS-MCP}, an open, dual-plane framework providing both pre-generation contract consultation and runtime invariant enforcement for analytical AI agents. First, we formalize the \textbf{Semantic Contract Open Standard (SCOS)}, an open specification defining metric grains, population bounds, and commutative invariant algebra. Second, we present a read-only \textbf{Model Context Protocol (MCP)} server that exposes SCOS contracts and abstract syntax tree (AST) validation tools directly to reasoning LLMs with tamper-evident cryptographic audit chains. Third, we establish a deterministic, denominator-precise mutation evaluation harness and trajectory replay engine. Across a frozen holdout benchmark corpus of 14 enterprise metric contracts and 20 multi-class scenarios, our framework demonstrates that contract-grounded agent governance eliminates silent semantic defects without requiring model retraining, while providing zero-compute offline regression testing.
+In this work, we present \textbf{Semantic-SQL-Bench}, an open benchmark and evaluation framework designed specifically to stress-test the business-semantic correctness of Text-to-SQL agents. The framework comprises three core components: (1) a multi-domain corpus of 14 enterprise metric contracts across development and frozen holdout tracks; (2) an abstract syntax tree (AST) chaos mutation suite defining 5 domain-level semantic defect operators; and (3) contract-grounded evaluation oracles that evaluate both static AST invariant adherence and empirical fixture-backed correctness. Furthermore, we characterize the systems tradeoff between zero-execution static pre-flight AST linting (sub-millisecond pre-generation guidance) versus fixture-backed relational execution verification. Across our frozen holdout mutation corpus, contract-grounded verification catches 61.1\% of valid executable semantic mutations (11/18), compared to 0.0\% (0/18) detected by standard minimal structural schema tests, establishing a rigorous methodology for evaluating semantic reliability in AI-driven data analytics.
 \end{abstract}
 
 \section{Introduction and Problem Definition}
