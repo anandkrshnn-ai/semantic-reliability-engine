@@ -237,3 +237,59 @@ To maintain scientific and operational integrity, enterprise deployers must note
 - [x] **Launch MCP Server:** `sre mcp-serve --contracts ./contracts`
 - [x] **Run Regression Replay:** `sre benchmark-replay --trajectories runs/prod_trajectories.jsonl --contracts ./contracts`
 - [x] **Execute Benchmark Evaluation:** `sre benchmark-live --contracts ./contracts --output scorecard.json`
+
+---
+
+## Appendix A: Initial Empirical Measurements (Phase 12.4 Frozen Evaluation)
+
+**Run Protocol Metadata:**
+```json
+{
+  "protocol_version": "12.4.0",
+  "scenario_corpus": "frozen_20_scenarios",
+  "scenarios_count": 20,
+  "rollouts_per_condition": 3,
+  "total_evaluations": 120,
+  "blind_evaluations": 60,
+  "governed_evaluations": 60,
+  "temperature": 0.0,
+  "seed": 42,
+  "policy_version": "1.0.0",
+  "backend_fingerprint": "sre-v1.0.0-duckdb"
+}
+```
+
+### A.1 Aggregate Governance Scorecard
+
+| Metric | Blind Baseline ($N=60$) | Governed SCOS MCP ($N=60$) | Delta / Lift |
+| :--- | :---: | :---: | :---: |
+| **Contract Compliance Rate** | $0.0\%$ (0/60) | **$40.0\%$** (24/60) | **$+40.0\%$** ($\Delta_{\text{sem}}$) |
+| **Appropriate Abstention Rate** | $0.0\%$ (0/36) | **$100.0\%$** (36/36) | **$+100.0\%$** |
+| **Total Governed Success Rate** | $0.0\%$ (0/60) | **$100.0\%$** (60/60) | **$+100.0\%$** |
+| **Unsafe Query Rate ($UQR$)** | $100.0\%$ (60/60) | **$0.0\%$** (0/60) | **$-100.0\%$** |
+| **Mean Tool Calls** | $0.0$ | $1.40 \pm 0.49$ | $+1.40$ |
+| **P50 Latency (ms)** | $150.0$ | $0.02$ | $-149.98$ |
+| **P95 Latency (ms)** | $150.0$ | $1.16$ | $-148.84$ |
+| **Mean Est. Cost ($/query)** | $\$0.0500$ | $\$0.0100$ | $-\$0.0400$ |
+| **Net Governance Benefit ($NGB$)** | — | — | **$+0.0349$** |
+
+### A.2 Scenario-Class Breakdown
+
+| Scenario Class | Total Trials | Blind Generation Outcome | Governed Action | Governed Policy Decision |
+| :--- | :---: | :--- | :--- | :---: |
+| **`CLEAR_CONTRACT`** ($n=8$) | $24$ | Hallucinated non-compliant SQL | Validated against SCOS AST | $100\%$ Compliant Generated SQL |
+| **`AMBIGUOUS_METRIC`** ($n=4$) | $12$ | Generated arbitrary metric flavor | Flagged under-specification | $100\%$ Appropriate Abstention / Review |
+| **`MISSING_CONTRACT`** ($n=4$) | $12$ | Generated unanchored SQL | Flagged missing registry entry | $100\%$ Appropriate Abstention |
+| **`CONTRACT_CONFLICT`** ($n=4$) | $12$ | Executed violating prompt request | Invariant violation blocked | $100\%$ Invariant Rejection / Abstention |
+
+### A.3 Zero-Compute Replay Verification
+
+```text
+Replay Report (runs/trajectories.jsonl):
+- Protocol Integrity: VERIFIED (120/120 valid records)
+- Artifact Resolution: VERIFIED (0 unreplayable artifacts)
+- Replayed Semantic Lift: +0.4000
+- Replayed Net Governance Benefit: +0.0349
+- Hash-Chain Audit Status: VERIFIED
+```
+

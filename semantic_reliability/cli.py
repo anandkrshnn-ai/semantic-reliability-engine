@@ -811,8 +811,9 @@ def mcp_serve(contracts):
 @main.command(name="benchmark-replay")
 @click.option("--trajectories", required=True, help="Path to input JSONL trajectories file")
 @click.option("--contracts", default="benchmark_corpus", help="Path to SCOS contracts directory")
+@click.option("--artifacts-dir", default="artifacts/benchmark", help="Path to local raw SQL artifacts directory")
 @click.option("--output", default=None, help="Optional output JSON scorecard file")
-def benchmark_replay(trajectories, contracts, output):
+def benchmark_replay(trajectories, contracts, artifacts_dir, output):
     """Replay recorded agent trajectories against active SCOS contracts."""
     from semantic_reliability.benchmark.replay import load_trajectories, TrajectoryReplayEngine
     from semantic_reliability.benchmark.scenarios import SCENARIOS
@@ -830,10 +831,11 @@ def benchmark_replay(trajectories, contracts, output):
                 pass
 
     trajs = load_trajectories(trajectories)
-    engine = TrajectoryReplayEngine(registry=registry)
+    engine = TrajectoryReplayEngine(registry=registry, raw_artifacts_dir=artifacts_dir)
     res = engine.replay_trajectories(trajs, SCENARIOS)
 
     click.echo(f"Replayed {res['total_replayed']} trajectories.")
+    click.echo(f"Unreplayable Artifacts: {res.get('unreplayable_artifacts_count', 0)}")
     scorecard = res.get("scorecard", {})
     if scorecard:
         click.echo(f"Semantic Lift: {scorecard.get('semantic_lift')}")

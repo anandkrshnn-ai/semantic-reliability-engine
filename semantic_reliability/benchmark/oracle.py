@@ -69,7 +69,10 @@ class OracleValidator:
 
         # 2. Contract Compliance
         contract_compliant = True
-        if scenario.target_metric_urn:
+        if scenario.expected_behavior in ("ABSTAIN", "ASK_CLARIFICATION", "REQUIRE_REVIEW"):
+            # Generating unguided SQL when the scenario requires abstention/clarification is non-compliant
+            contract_compliant = False
+        elif scenario.target_metric_urn:
             try:
                 m_slug = scenario.target_metric_urn.split(":")[-1]
                 m_def, _ = self.registry.get(m_slug)

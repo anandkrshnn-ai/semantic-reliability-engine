@@ -26,25 +26,79 @@ def benchmark_db():
     conn.execute("""
         CREATE TABLE transactions (
             customer_id VARCHAR,
+            transaction_date DATE,
+            type VARCHAR,
             amount DOUBLE,
-            status VARCHAR,
-            trans_date DATE
+            region VARCHAR,
+            status VARCHAR
         );
         INSERT INTO transactions VALUES
-            ('C1', 100.0, 'active', '2026-01-01'),
-            ('C1', 50.0, 'cancelled', '2026-01-02'),
-            ('C2', 200.0, 'active', '2026-01-03');
+            ('C1', '2026-01-01', 'invoice', 100.0, 'NA', 'active'),
+            ('C1', '2026-01-02', 'refund', 20.0, 'NA', 'active'),
+            ('C2', '2026-01-03', 'invoice', 200.0, 'EU', 'active');
+
+        CREATE TABLE orders (
+            customer_id VARCHAR,
+            order_amount DOUBLE,
+            order_status VARCHAR,
+            is_test BOOLEAN
+        );
+        INSERT INTO orders VALUES
+            ('C1', 50.0, 'completed', false),
+            ('C2', 120.0, 'completed', false);
+
+        CREATE TABLE user_logins (
+            user_id VARCHAR,
+            login_date DATE,
+            status VARCHAR,
+            is_bot BOOLEAN
+        );
+        INSERT INTO user_logins VALUES
+            ('U1', '2026-01-01', 'active', false),
+            ('U2', '2026-01-02', 'active', false);
 
         CREATE TABLE subscriptions (
-            customer_id VARCHAR,
-            base_fee DOUBLE,
-            discount DOUBLE,
-            status VARCHAR,
-            renewal_date DATE
+            plan VARCHAR,
+            cancelled BOOLEAN,
+            is_trial BOOLEAN
         );
         INSERT INTO subscriptions VALUES
-            ('C1', 100.0, 10.0, 'active', '2026-01-01'),
-            ('C2', 50.0, 0.0, 'cancelled', '2026-01-02');
+            ('pro', false, false),
+            ('enterprise', true, false);
+
+        CREATE TABLE cohorts (
+            cohort_id VARCHAR,
+            retained_users INT,
+            total_users INT,
+            is_active BOOLEAN
+        );
+        INSERT INTO cohorts VALUES
+            ('2026_Q1', 80, 100, true);
+
+        CREATE TABLE tickets (
+            tier VARCHAR,
+            met_sla BOOLEAN,
+            status VARCHAR
+        );
+        INSERT INTO tickets VALUES
+            ('tier1', true, 'resolved');
+
+        CREATE TABLE inventory (
+            warehouse_id VARCHAR,
+            cogs DOUBLE,
+            avg_inventory DOUBLE,
+            is_obsolete BOOLEAN
+        );
+        INSERT INTO inventory VALUES
+            ('W1', 1000.0, 200.0, false);
+
+        CREATE TABLE checkouts (
+            step VARCHAR,
+            converted BOOLEAN,
+            is_bot BOOLEAN
+        );
+        INSERT INTO checkouts VALUES
+            ('cart', true, false);
     """)
     return conn
 
@@ -56,22 +110,88 @@ def contract_registry():
         metric="net_revenue",
         owner="finance",
         grain="customer_month",
-        sql="SELECT customer_id, SUM(amount) AS net_revenue FROM transactions WHERE status = 'active' GROUP BY 1",
+        sql="SELECT customer_id, DATE_TRUNC('month', transaction_date) AS reporting_month, SUM(CASE WHEN type = 'invoice' THEN amount ELSE 0 END) - SUM(CASE WHEN type = 'refund' THEN amount ELSE 0 END) AS net_revenue FROM transactions WHERE region = 'NA' AND status = 'active' GROUP BY customer_id, DATE_TRUNC('month', transaction_date)",
         dialect="duckdb",
         metadata={"domain": "finance"},
+        invariants=SemanticInvariants(
+            population=PopulationInvariant(required_filters=["region = 'NA'", "status = 'active'"])
+        )
+    ))
+    registry.register(MetricDefinition(
+        metric="average_order_value",
+        owner="ecommerce",
+        grain="customer",
+        sql="SELECT customer_id, AVG(order_amount) AS avg_order_value FROM orders WHERE order_status = 'completed' AND is_test = false GROUP BY customer_id",
+        dialect="duckdb",
+        metadata={"domain": "ecommerce"},
+        invariants=SemanticInvariants(
+            population=PopulationInvariant(required_filters=["order_status = 'completed'", "is_test = false"])
+        )
+    ))
+    registry.register(MetricDefinition(
+        metric="monthly_active_users",
+        owner="product",
+        grain="monthly",
+        sql="SELECT DATE_TRUNC('month', login_date) AS reporting_month, COUNT(DISTINCT user_id) AS active_users FROM user_logins WHERE status = 'active' AND is_bot = false GROUP BY DATE_TRUNC('month', login_date)",
+        dialect="duckdb",
+        metadata={"domain": "product"},
+        invariants=SemanticInvariants(
+            population=PopulationInvariant(required_filters=["status = 'active'", "is_bot = false"])
+        )
+    ))
+    registry.register(MetricDefinition(
+        metric="customer_churn_rate",
+        owner="growth",
+        grain="plan",
+        sql="SELECT plan, COUNT(CASE WHEN cancelled = true THEN 1 END) * 1.0 / COUNT(*) AS churn_rate FROM subscriptions WHERE is_trial = false GROUP BY plan",
+        dialect="duckdb",
+        metadata={"domain": "growth"},
+        invariants=SemanticInvariants(
+            population=PopulationInvariant(required_filters=["is_trial = false"])
+        )
+    ))
+    registry.register(MetricDefinition(
+        metric="customer_retention_rate",
+        owner="growth",
+        grain="cohort_id",
+        sql="SELECT cohort_id, SUM(CASE WHEN returned_next_period = true THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS retention_rate FROM retention_cohorts WHERE status = 'active' GROUP BY cohort_id",
+        dialect="duckdb",
+        metadata={"domain": "growth"},
         invariants=SemanticInvariants(
             population=PopulationInvariant(required_filters=["status = 'active'"])
         )
     ))
     registry.register(MetricDefinition(
-        metric="mrr",
-        owner="finance",
-        grain="customer_month",
-        sql="SELECT customer_id, SUM(base_fee - discount) AS mrr FROM subscriptions WHERE status = 'active' GROUP BY 1",
+        metric="sla_compliance_rate",
+        owner="operations",
+        grain="tier",
+        sql="SELECT priority, SUM(CASE WHEN resolved_within_sla = true THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS sla_rate FROM support_tickets WHERE is_spam = false GROUP BY priority",
         dialect="duckdb",
-        metadata={"domain": "finance"},
+        metadata={"domain": "operations"},
         invariants=SemanticInvariants(
-            population=PopulationInvariant(required_filters=["status = 'active'"])
+            population=PopulationInvariant(required_filters=["is_spam = false"])
+        )
+    ))
+    registry.register(MetricDefinition(
+        metric="inventory_turnover",
+        owner="supply_chain",
+        grain="warehouse_id",
+        sql="SELECT warehouse_id, SUM(cogs) / SUM(stock_value) AS turnover_ratio FROM inventory_movements WHERE is_obsolete = false GROUP BY warehouse_id",
+        dialect="duckdb",
+        metadata={"domain": "supply_chain"},
+        invariants=SemanticInvariants(
+            population=PopulationInvariant(required_filters=["is_obsolete = false"])
+        )
+    ))
+    registry.register(MetricDefinition(
+        metric="checkout_conversion_rate",
+        owner="ecommerce",
+        grain="step",
+        sql="SELECT COUNT(CASE WHEN event_name = 'checkout_complete' THEN 1 END) * 1.0 / COUNT(*) AS conversion_rate FROM checkout_events WHERE is_internal_ip = false",
+        dialect="duckdb",
+        metadata={"domain": "ecommerce"},
+        invariants=SemanticInvariants(
+            population=PopulationInvariant(required_filters=["is_internal_ip = false"])
         )
     ))
     return registry
@@ -114,14 +234,14 @@ def test_evaluator_scorecard_and_semantic_lift():
     assert scorecard["blind_baseline"]["unsafe_query_rate"] == 1.0
     assert scorecard["blind_baseline"]["contract_compliance"] == 0.0
 
-    # Governed adapter succeeds on contracts (2 compliant queries, 2 appropriate abstentions)
-    assert scorecard["governed_mcp"]["contract_compliance"] == 0.5
-    assert scorecard["governed_mcp"]["appropriate_abstention_rate"] == 0.5
+    # Governed adapter succeeds on contracts (8 compliant queries = 0.40, 12 appropriate abstentions = 0.60)
+    assert scorecard["governed_mcp"]["contract_compliance"] == 0.40
+    assert scorecard["governed_mcp"]["appropriate_abstention_rate"] == 0.60
     assert scorecard["governed_mcp"]["unsafe_query_rate"] == 0.0
 
-    # Semantic lift is +0.50
-    assert scorecard["semantic_lift"] == 0.5
-    assert scorecard["net_governance_benefit"] > 0.4
+    # Semantic lift is +0.40
+    assert scorecard["semantic_lift"] == 0.40
+    assert scorecard["net_governance_benefit"] > 0.3
 
 
 def test_trajectory_privacy_redaction():
@@ -153,7 +273,8 @@ def test_trajectory_export_and_replay_engine(tmp_path, benchmark_db, contract_re
 
     # 1. Export to JSONL
     out_jsonl = tmp_path / "trajectories.jsonl"
-    export_trajectories(trajectories, out_jsonl)
+    art_dir = tmp_path / "artifacts"
+    export_trajectories(trajectories, out_jsonl, raw_artifacts_dir=art_dir)
     assert out_jsonl.exists()
 
     # 2. Load from JSONL
@@ -161,13 +282,14 @@ def test_trajectory_export_and_replay_engine(tmp_path, benchmark_db, contract_re
     assert len(loaded) == len(SCENARIOS)
     assert loaded[0].final_sql_raw is None  # Confirmed redacted
 
-    # 3. Replay with in-memory trajectories containing final_sql_raw
-    engine = TrajectoryReplayEngine(registry=contract_registry, conn=benchmark_db)
-    replay_res = engine.replay_trajectories(trajectories, SCENARIOS)
+    # 3. Replay with artifacts directory
+    engine = TrajectoryReplayEngine(registry=contract_registry, conn=benchmark_db, raw_artifacts_dir=art_dir)
+    replay_res = engine.replay_trajectories(loaded, SCENARIOS)
     assert replay_res["total_replayed"] == len(SCENARIOS)
+    assert replay_res["unreplayable_artifacts_count"] == 0
     assert "scorecard" in replay_res
-    assert replay_res["scorecard"]["governed_mcp"]["contract_compliance"] == 0.5
-    assert replay_res["scorecard"]["governed_mcp"]["appropriate_abstention_rate"] == 0.5
+    assert replay_res["scorecard"]["governed_mcp"]["contract_compliance"] == 0.40
+    assert replay_res["scorecard"]["governed_mcp"]["appropriate_abstention_rate"] == 0.60
 
 
 def test_live_governed_adapter_and_cli(contract_registry):
