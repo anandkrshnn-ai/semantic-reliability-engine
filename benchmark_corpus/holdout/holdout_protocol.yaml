@@ -1,6 +1,6 @@
 protocol_version: "1.0"
 corpus_split: "holdout"
-freeze_commit: "2926ab42b922838d299dbf5538356a9418fd8fd1"
+freeze_commit: "868379f050ab1a7cd5a2586d080e37e77c27cd8b"
 freeze_tag: "v1.0.0-phase7"
 validity_policy_version: "1.0"
 mutation_operator_version: "1.0.0"
