@@ -259,7 +259,8 @@ Mean Tool Invocations & 0.0 & $1.40 \pm 0.49$ & +1.40 \\
 \section{Reproducibility, Provenance \& Artifact Availability}
 \label{sec:reproducibility}
 
-All contracts, schemas, test suites, and benchmark trajectories are open-sourced under the Apache 2.0 license at \url{https://github.com/anandkrshnn-ai/semantic-reliability-engine}. The test harness includes 122 automated unit tests runnable via \texttt{pytest}.
+All contracts, schemas, test suites, and benchmark trajectories are open-sourced under the Apache 2.0 license at \url{https://github.com/anandkrshnn-ai/semantic-reliability-engine}. The test harness includes 128 automated unit tests runnable via \texttt{pytest}.
+
 
 \paragraph{Provenance Disclosure \& Verification Policy.} External test suites were incorporated only where exact column names, schema models, and test definitions were independently verified against public repositories (specifically \texttt{dbt-labs/jaffle\_shop}). Additional domain candidate packages (including SaaS and healthcare packages) were evaluated and excluded from Tier~2 after independent repository audits established that their public schemas did not define matching column-level assertions for the evaluated metrics. All other domain models across SaaS, healthcare, and infrastructure are evaluated without claiming external public package provenance to maintain strict empirical integrity. The reported results demonstrate verified, reproducible execution across the 4-tier baseline ladder.
 

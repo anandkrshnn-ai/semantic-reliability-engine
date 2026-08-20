@@ -69,6 +69,17 @@ class MetricProbes(BaseModel):
     null_drift: List[NullDriftProbe] = Field(default_factory=list)
 
 
+class ContractProvenance(BaseModel):
+    """Verifiable upstream sourcing and provenance metadata for metric contracts."""
+    repository: Optional[str] = Field(None, description="Canonical source repository URL (e.g. https://github.com/dbt-labs/jaffle_shop)")
+    organization: Optional[str] = Field(None, description="Authoring or publishing organization")
+    reference_path: Optional[str] = Field(None, description="Path within upstream repository")
+    commit_sha: Optional[str] = Field(None, description="Verified upstream commit hash")
+    verified_at: Optional[str] = Field(None, description="ISO timestamp of last mechanical verification")
+    verified_symbols: List[str] = Field(default_factory=list, description="Verified column, model, and test symbols")
+    license: Optional[str] = Field("Apache-2.0", description="Contract or upstream license")
+
+
 class MetricDefinition(BaseModel):
     """Schema for ground-truth business metric definitions with policy-driven invariants and statistical probes."""
     metric: str = Field(..., description="Unique metric identifier (e.g. net_revenue)")
@@ -81,4 +92,6 @@ class MetricDefinition(BaseModel):
     dimensions: List[str] = Field(default_factory=list, description="Allowed slice/dice dimensions")
     invariants: Optional[SemanticInvariants] = Field(default_factory=SemanticInvariants, description="Declarative semantic contract invariants")
     probes: Optional[MetricProbes] = Field(default_factory=MetricProbes, description="Declarative statistical probes for runtime semantic observability")
+    provenance: Optional[ContractProvenance] = Field(None, description="Verifiable external provenance metadata")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Arbitrary custom metadata")
+

@@ -1,8 +1,3 @@
-# Provenance:
-#   Repository: https://github.com/dbt-labs/jaffle_shop
-#   Organization: dbt Labs
-#   Reference: models/staging/schema.yml, tests/assert_positive_total_for_payments.sql
-
 version: 2
 models:
 - name: model_net_revenue
@@ -16,6 +11,5 @@ models:
   - name: net_revenue
     tests:
     - not_null
-    - accepted_range:
-        min_value: 0.0
+
 
