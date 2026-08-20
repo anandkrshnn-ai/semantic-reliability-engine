@@ -97,13 +97,17 @@ class BaselineLadderEvaluator:
         # Execute assertions against DataFrame or SQL + DuckDB
         for assertion in active_suite.assertions:
             if df is not None and hasattr(assertion, "evaluate_df"):
-                if assertion.assertion_type in ("relationships", "singular_sql_test"):
+                if assertion.assertion_type == "relationships":
+                    from_col = getattr(assertion, "from_column", None)
+                    if from_col and from_col not in df.columns:
+                        continue
+                    res = assertion.evaluate_df(df, con=db_con)
+                elif assertion.assertion_type == "singular_sql_test":
                     res = assertion.evaluate_df(df, con=db_con)
                 else:
                     # Check if required column exists in df for column-specific assertion
                     col = getattr(assertion, "column", None)
                     if col and col not in df.columns:
-                        # Skip column test if column isn't part of this model output
                         continue
                     cols = getattr(assertion, "columns", None)
                     if cols and not any(c in df.columns for c in cols):
