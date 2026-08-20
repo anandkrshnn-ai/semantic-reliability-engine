@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-20T10:59:23Z",
+  "timestamp": "2026-08-20T11:06:36Z",
   "total_models": 14,
   "total_valid_defects": 44,
   "summary": [
@@ -8,8 +8,8 @@
       "caught": 0,
       "total": 44,
       "catch_rate_pct": 0.0,
-      "p50_latency_ms": 0.38,
-      "p95_latency_ms": 0.71,
+      "p50_latency_ms": 0.41,
+      "p95_latency_ms": 0.63,
       "compute_type": "sqlglot AST parse",
       "est_cost": "$0.00"
     },
@@ -18,18 +18,18 @@
       "caught": 4,
       "total": 44,
       "catch_rate_pct": 9.09,
-      "p50_latency_ms": 0.25,
-      "p95_latency_ms": 0.33,
+      "p50_latency_ms": 0.27,
+      "p95_latency_ms": 0.42,
       "compute_type": "null / unique / bounds",
       "est_cost": "$0.00"
     },
     {
       "tier": "Tier 2: Realistic dbt Suite",
-      "caught": 4,
+      "caught": 6,
       "total": 44,
-      "catch_rate_pct": 9.09,
-      "p50_latency_ms": 2.23,
-      "p95_latency_ms": 5.17,
+      "catch_rate_pct": 13.64,
+      "p50_latency_ms": 1.53,
+      "p95_latency_ms": 2.57,
       "compute_type": "accepted_range / values / fk / singular",
       "est_cost": "$0.00"
     },
@@ -38,8 +38,8 @@
       "caught": 27,
       "total": 44,
       "catch_rate_pct": 61.36,
-      "p50_latency_ms": 0.79,
-      "p95_latency_ms": 1.26,
+      "p50_latency_ms": 0.82,
+      "p95_latency_ms": 1.28,
       "compute_type": "Deterministic AST Compiler",
       "est_cost": "$0.00"
     },
@@ -48,8 +48,8 @@
       "caught": 27,
       "total": 44,
       "catch_rate_pct": 61.36,
-      "p50_latency_ms": 2.34,
-      "p95_latency_ms": 5.12,
+      "p50_latency_ms": 2.43,
+      "p95_latency_ms": 5.55,
       "compute_type": "DuckDB Join / Predicate Fixture",
       "est_cost": "~$0.01 / scan"
     }
@@ -84,7 +84,7 @@
       "valid_defects": 3,
       "tier_0_caught": 0,
       "tier_1_caught": 1,
-      "tier_2_caught": 1,
+      "tier_2_caught": 3,
       "tier_3_caught": 2,
       "tier_4_caught": 3
     },

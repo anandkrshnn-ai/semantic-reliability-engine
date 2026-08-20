@@ -1,3 +1,7 @@
+# Provenance:
+#   Repository: https://github.com/dbt-labs/jaffle_shop
+#   Organization: dbt Labs
+
 version: 2
 models:
 - name: model_checkout_conversion_rate
@@ -5,3 +9,7 @@ models:
   - name: conversion_rate
     tests:
     - not_null
+    - accepted_range:
+        min_value: 0.0
+        max_value: 1.0
+

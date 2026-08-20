@@ -25,6 +25,7 @@ from semantic_reliability.compiler.compiler import MetricCompiler
 from semantic_reliability.compiler.contracts import SemanticContractValidator
 from semantic_reliability.mutations.engine import MutationEngine
 from semantic_reliability.assertions.registry import AssertionSuite
+from semantic_reliability.adapters.dbt_adapter import DBTTestAdapter
 from semantic_reliability.harness.baseline_ladder import BaselineLadderEvaluator
 from semantic_reliability.harness.duckdb_runner import DuckDBFixtureRunner
 
@@ -73,6 +74,8 @@ def run_benchmark():
             metric_def = compiler.definition if compiler else None
 
             sem_suite = AssertionSuite.from_yaml_file(sem_yaml) if sem_yaml.exists() else AssertionSuite.get_semantic_assertion_suite()
+            dbt_yaml = m_dir / "schema.yml"
+            model_dbt_suite = DBTTestAdapter.parse_schema_yml(dbt_yaml) if dbt_yaml.exists() else realistic_suite
 
             # Initialize DuckDB
             con = duckdb.connect(":memory:")
@@ -89,7 +92,7 @@ def run_benchmark():
             mutator = MutationEngine(sql_text)
             mutations = mutator.generate_all_mutations()
 
-            evaluator = BaselineLadderEvaluator(contract=metric_def, conn=con, suite=realistic_suite)
+            evaluator = BaselineLadderEvaluator(contract=metric_def, conn=con, suite=model_dbt_suite)
 
             model_record = {
                 "track": track_name,
@@ -148,7 +151,7 @@ def run_benchmark():
 
                 # 3. Tier 2: Realistic dbt Suite
                 t2_start = time.perf_counter()
-                t2_res = evaluator.evaluate_tier_2_realistic_dbt(df=mut_df, sql=mut_sql, conn=con, suite=realistic_suite)
+                t2_res = evaluator.evaluate_tier_2_realistic_dbt(df=mut_df, sql=mut_sql, conn=con, suite=model_dbt_suite)
                 t2_dur = (time.perf_counter() - t2_start) * 1000.0
                 tier_stats["tier_2"]["latencies_ms"].append(t2_dur)
                 t2_caught = not t2_res["passed"]
