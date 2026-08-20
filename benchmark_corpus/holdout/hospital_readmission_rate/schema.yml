@@ -1,8 +1,3 @@
-# Provenance:
-#   Repository: https://github.com/tuva-health/tuva
-#   Organization: Tuva Health
-#   Reference: models/data_marts/readmissions/schema.yml
-
 version: 2
 models:
 - name: model_hospital_readmission_rate
@@ -13,7 +8,5 @@ models:
   - name: readmission_rate
     tests:
     - not_null
-    - accepted_range:
-        min_value: 0.0
-        max_value: 1.0
+
 

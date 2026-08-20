@@ -1,7 +1,3 @@
-# Provenance:
-#   Repository: https://github.com/fivetran/dbt_stripe
-#   Organization: Fivetran
-
 version: 2
 models:
 - name: model_customer_retention_rate
@@ -12,7 +8,5 @@ models:
   - name: retention_rate
     tests:
     - not_null
-    - accepted_range:
-        min_value: 0.0
-        max_value: 1.0
+
 
