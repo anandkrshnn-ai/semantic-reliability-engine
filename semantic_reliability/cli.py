@@ -952,16 +952,21 @@ def benchmark_live(contracts, output, trajectories_out, artifacts_dir, provider,
 @click.option("--audit-citations", type=click.Path(exists=True), default=None, help="Optional LaTeX paper file to audit citations")
 @click.option("--strict/--no-strict", default=True, help="Fail with non-zero exit code if any provenance claim fails verification")
 def audit_provenance_cmd(target_dir, audit_citations, strict):
-    """Mechanically audit external repository provenance claims against ground-truth upstream repos."""
+    """Mechanically audit external repository provenance claims against ground-truth upstream repos.
+    
+    Note: When --audit-citations is provided, verifies internal bibliography consistency (resolvable keys,
+    author/year structure). External publisher existence must be verified against arXiv/DOI databases.
+    """
     from semantic_reliability.evaluation.provenance_auditor import ProvenanceAuditor
 
     console.print(Panel(
         f"[bold cyan]Auditing External Provenance Claims in:[/bold cyan] {target_dir}\n"
-        + (f"[bold cyan]Auditing LaTeX Citations in:[/bold cyan] {audit_citations}\n" if audit_citations else "")
+        + (f"[bold cyan]Auditing LaTeX Citations in:[/bold cyan] {audit_citations} (Internal Consistency)\n" if audit_citations else "")
         + "[dim]Verifying all claimed repositories, files, columns, and test symbols against upstream git sources...[/dim]",
         title="[bold green]Mechanical Provenance Verifier[/bold green]",
         border_style="cyan",
     ))
+
 
     results = ProvenanceAuditor.audit_directory(Path(target_dir))
     any_failed = False

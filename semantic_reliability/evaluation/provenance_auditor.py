@@ -208,8 +208,16 @@ class ProvenanceAuditor:
 
     @classmethod
     def audit_latex_bibliography(cls, tex_path: Path) -> Dict[str, Any]:
-        """Audits LaTeX bibliography entries to ensure citations are resolvable and well-formed."""
+        """Audits LaTeX bibliography entries to ensure citations are resolvable and well-formed.
+        
+        NOTE ON VERIFICATION BOUNDARIES:
+        This check verifies INTERNAL bibliography consistency only (citation keys resolve,
+        formatting structure contains standard authors and years). It does NOT verify that
+        cited works exist externally in publisher indexes. External existence must be
+        independently verified against arXiv/DOI/publisher records before paper release.
+        """
         text = tex_path.read_text(encoding="utf-8")
+
         
         # 1. Extract all \cite{key1, key2}
         cited_keys = set()
