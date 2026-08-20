@@ -1,30 +1,72 @@
+# Tier-2 Extended dbt Data Quality Suite
+# Source Provenance:
+#   Repository: https://github.com/dbt-labs/jaffle_shop
+#   Organization: dbt Labs
+#   License: Apache-2.0
+#   Reference Files:
+#     - models/staging/schema.yml (stg_orders, stg_payments, stg_customers)
+#     - tests/assert_positive_total_for_payments.sql
+#
+# Sourced Test Definitions:
+# 1. accepted_values on `status`: ['placed', 'shipped', 'completed', 'return_pending', 'returned']
+# 2. accepted_values on `payment_method`: ['credit_card', 'coupon', 'bank_transfer', 'gift_card']
+# 3. relationships on `customer_id`: references stg_customers.customer_id
+# 4. accepted_range (dbt-utils) on `amount`: min_value >= 0.0
+# 5. singular_sql_test: tests/assert_positive_total_for_payments.sql
+
 suite_name: realistic_dbt_suite
-description: Tier-2 Extended dbt Data Quality Suite with range bounds, categorical domain checks, referential integrity, and singular metric tests.
+description: "Tier-2 Extended dbt Data Quality Suite sourced from dbt-labs/jaffle_shop public reference repository."
+provenance:
+  repository: "https://github.com/dbt-labs/jaffle_shop"
+  organization: "dbt Labs"
+  reference_files:
+    - "models/staging/schema.yml"
+    - "tests/assert_positive_total_for_payments.sql"
+
 assertions:
   - type: not_null
+    name: not_null_stg_orders_order_id_customer_id
     columns:
+      - order_id
       - customer_id
-      - reporting_month
-      - net_revenue
+    description: "dbt generic test: not_null on order_id and customer_id (dbt-labs/jaffle_shop/models/staging/schema.yml)"
+
   - type: unique_key
+    name: unique_stg_orders_order_id
     columns:
-      - customer_id
-      - reporting_month
+      - order_id
+    description: "dbt generic test: unique on order_id (dbt-labs/jaffle_shop/models/staging/schema.yml)"
+
   - type: row_count_bounds
+    name: row_count_bounds_stg_orders
     min_rows: 1
-  - type: accepted_range
-    column: net_revenue
-    min_value: 0.0
-    description: Net revenue cannot be negative for active cohorts
+    description: "Volumetric sanity: table must contain at least 1 record"
+
   - type: accepted_values
+    name: accepted_values_stg_orders_status
     column: status
     values:
-      - active
-      - pending
+      - placed
+      - shipped
+      - completed
+      - return_pending
+      - returned
+    description: "dbt generic test: accepted_values on order status (dbt-labs/jaffle_shop/models/staging/schema.yml)"
+
   - type: relationships
+    name: relationships_stg_orders_customer_id__customer_id__ref_stg_customers
     from_column: customer_id
     to_table: customers
-    to_column: id
+    to_column: customer_id
+    description: "dbt generic test: relationships foreign key from stg_orders.customer_id to customers.customer_id (dbt-labs/jaffle_shop/models/staging/schema.yml)"
+
+  - type: accepted_range
+    name: accepted_range_stg_payments_amount
+    column: amount
+    min_value: 0.0
+    description: "dbt-utils generic test: accepted_range min_value >= 0.0 on payment amount (dbt-labs/jaffle_shop/models/staging/schema.yml)"
+
   - type: singular_sql_test
-    name: assert_no_unaccounted_refunds
-    sql: "SELECT * FROM {{ model }} WHERE net_revenue > gross_revenue"
+    name: assert_positive_total_for_payments
+    sql: "SELECT order_id, SUM(amount) AS total_amount FROM {{ model }} GROUP BY 1 HAVING NOT(SUM(amount) >= 0)"
+    description: "dbt singular test: assert_positive_total_for_payments (dbt-labs/jaffle_shop/tests/assert_positive_total_for_payments.sql)"

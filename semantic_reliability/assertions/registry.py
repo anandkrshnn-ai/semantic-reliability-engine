@@ -7,6 +7,10 @@ from semantic_reliability.assertions.structural import (
     NonNullOutputAssertion,
     UniqueKeyAssertion,
     RowCountBoundsAssertion,
+    AcceptedRangeAssertion,
+    AcceptedValuesAssertion,
+    RelationshipsAssertion,
+    SingularSqlAssertion,
 )
 from semantic_reliability.assertions.semantic import (
     RequiredPopulationAssertion,
@@ -48,6 +52,34 @@ class AssertionSuite:
                     max_rows=a_conf.get("max_rows"),
                     name=name
                 ))
+            elif a_type in ("accepted_range", "range", "dbt_utils.accepted_range"):
+                suite.add(AcceptedRangeAssertion(
+                    column=a_conf.get("column", ""),
+                    min_value=a_conf.get("min_value"),
+                    max_value=a_conf.get("max_value"),
+                    inclusive=a_conf.get("inclusive", True),
+                    name=name,
+                ))
+            elif a_type in ("accepted_values", "categorical_set", "domain"):
+                suite.add(AcceptedValuesAssertion(
+                    column=a_conf.get("column", ""),
+                    values=a_conf.get("values", []),
+                    quote=a_conf.get("quote", True),
+                    name=name,
+                ))
+            elif a_type in ("relationships", "foreign_key", "referential_integrity"):
+                suite.add(RelationshipsAssertion(
+                    from_column=a_conf.get("from_column") or a_conf.get("column", ""),
+                    to_table=a_conf.get("to_table", ""),
+                    to_column=a_conf.get("to_column") or a_conf.get("field", ""),
+                    name=name,
+                ))
+            elif a_type in ("singular_sql_test", "singular_test", "singular_sql", "custom_sql"):
+                suite.add(SingularSqlAssertion(
+                    name=a_conf.get("name", "singular_sql_test"),
+                    sql=a_conf.get("sql", ""),
+                    description=a_conf.get("description"),
+                ))
             elif a_type in ("population", "required_population", "required_filter"):
                 suite.add(RequiredPopulationAssertion(
                     source_table=a_conf.get("source_table", "transactions"),
@@ -73,11 +105,31 @@ class AssertionSuite:
 
     @classmethod
     def get_standard_structural_suite(cls) -> "AssertionSuite":
-        """Default baseline suite mimicking standard dbt test suite (nulls + uniqueness + row count)."""
+        """Default Tier-1 baseline suite mimicking standard minimal dbt test suite (nulls + uniqueness + row count)."""
         suite = cls(name="Standard_dbt_Structural_Suite")
         suite.add(NonNullOutputAssertion(columns=["customer_id", "reporting_month", "net_revenue"]))
         suite.add(UniqueKeyAssertion(columns=["customer_id", "reporting_month"]))
         suite.add(RowCountBoundsAssertion(min_rows=1))
+        return suite
+
+    @classmethod
+    def get_realistic_dbt_suite(cls) -> "AssertionSuite":
+        """Default Tier-2 realistic dbt test suite sourced from dbt-labs/jaffle_shop reference project."""
+        yaml_path = Path(__file__).resolve().parent.parent.parent / "examples" / "assertions" / "realistic_dbt_suite.yaml"
+        if yaml_path.exists():
+            return cls.from_yaml_file(yaml_path)
+
+        suite = cls(name="Realistic_dbt_Suite")
+        suite.add(NonNullOutputAssertion(columns=["order_id", "customer_id", "amount"]))
+        suite.add(UniqueKeyAssertion(columns=["order_id"]))
+        suite.add(RowCountBoundsAssertion(min_rows=1))
+        suite.add(AcceptedRangeAssertion(column="amount", min_value=0.0))
+        suite.add(AcceptedValuesAssertion(column="status", values=["placed", "shipped", "completed", "return_pending", "returned"]))
+        suite.add(RelationshipsAssertion(from_column="customer_id", to_table="customers", to_column="customer_id"))
+        suite.add(SingularSqlAssertion(
+            name="assert_positive_total_for_payments",
+            sql="SELECT order_id, SUM(amount) AS total_amount FROM {{ model }} GROUP BY 1 HAVING NOT(SUM(amount) >= 0)"
+        ))
         return suite
 
     @classmethod
@@ -104,3 +156,4 @@ class AssertionSuite:
             tolerance_pct=5.0
         ))
         return suite
+

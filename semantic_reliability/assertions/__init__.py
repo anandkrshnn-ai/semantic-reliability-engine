@@ -3,6 +3,10 @@ from semantic_reliability.assertions.structural import (
     NonNullOutputAssertion,
     UniqueKeyAssertion,
     RowCountBoundsAssertion,
+    AcceptedRangeAssertion,
+    AcceptedValuesAssertion,
+    RelationshipsAssertion,
+    SingularSqlAssertion,
 )
 from semantic_reliability.assertions.semantic import (
     RequiredPopulationAssertion,
@@ -17,8 +21,13 @@ __all__ = [
     "NonNullOutputAssertion",
     "UniqueKeyAssertion",
     "RowCountBoundsAssertion",
+    "AcceptedRangeAssertion",
+    "AcceptedValuesAssertion",
+    "RelationshipsAssertion",
+    "SingularSqlAssertion",
     "RequiredPopulationAssertion",
     "MetricValueAssertion",
     "ExpectedGrainAssertion",
     "AssertionSuite",
 ]
+
