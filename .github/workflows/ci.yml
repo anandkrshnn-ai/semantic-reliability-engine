@@ -2,13 +2,13 @@ name: CI & Benchmark Integrity
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
 jobs:
   test:
-    name: Run Unit Tests & Benchmark Suite
+    name: Run Unit Tests, Provenance Verification & Benchmark Suite
     runs-on: ubuntu-latest
 
     steps:
@@ -29,9 +29,14 @@ jobs:
           pip install -e .
           pip install -r requirements.txt
 
-      - name: Run Test Suite (112 Tests)
+      - name: Run Test Suite (128 Tests)
         run: |
           pytest tests/ -v
+
+      - name: Mechanical Provenance & Citation Audit
+        run: |
+          python -m semantic_reliability.cli audit-provenance --target-dir examples/assertions --audit-citations paper/main.tex --strict
+          python -m semantic_reliability.cli audit-provenance --target-dir benchmark_corpus --strict
 
       - name: Execute Dual-Track Benchmark & Protocol Verifier
         run: |
@@ -42,3 +47,4 @@ jobs:
         with:
           name: benchmark-results
           path: ci_benchmark_results.json
+

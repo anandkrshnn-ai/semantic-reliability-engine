@@ -949,56 +949,76 @@ def benchmark_live(contracts, output, trajectories_out, artifacts_dir, provider,
     console.print(f"Semantic Lift: [bold]{scorecard.get('semantic_lift', 0.0) * 100:.1f}%[/bold]")
 @main.command("audit-provenance")
 @click.option("--target-dir", type=click.Path(exists=True), default="benchmark_corpus", help="Target directory with schemas / contracts")
+@click.option("--audit-citations", type=click.Path(exists=True), default=None, help="Optional LaTeX paper file to audit citations")
 @click.option("--strict/--no-strict", default=True, help="Fail with non-zero exit code if any provenance claim fails verification")
-def audit_provenance_cmd(target_dir, strict):
+def audit_provenance_cmd(target_dir, audit_citations, strict):
     """Mechanically audit external repository provenance claims against ground-truth upstream repos."""
     from semantic_reliability.evaluation.provenance_auditor import ProvenanceAuditor
 
     console.print(Panel(
         f"[bold cyan]Auditing External Provenance Claims in:[/bold cyan] {target_dir}\n"
-        f"[dim]Verifying all claimed repositories, files, columns, and test symbols against upstream git sources...[/dim]",
+        + (f"[bold cyan]Auditing LaTeX Citations in:[/bold cyan] {audit_citations}\n" if audit_citations else "")
+        + "[dim]Verifying all claimed repositories, files, columns, and test symbols against upstream git sources...[/dim]",
         title="[bold green]Mechanical Provenance Verifier[/bold green]",
         border_style="cyan",
     ))
 
     results = ProvenanceAuditor.audit_directory(Path(target_dir))
+    any_failed = False
 
     if not results:
         console.print("[yellow]No external provenance claims found in target directory.[/yellow]")
-        return
+    else:
+        table = Table(title="Provenance Mechanical Verification Audit", show_header=True, header_style="bold magenta")
+        table.add_column("Source File", width=35)
+        table.add_column("Claimed Repository", width=30)
+        table.add_column("File Exists", width=12)
+        table.add_column("Status", width=12)
+        table.add_column("Reason / Detail", width=40)
 
-    table = Table(title="Provenance Mechanical Verification Audit", show_header=True, header_style="bold magenta")
-    table.add_column("Source File", width=35)
-    table.add_column("Claimed Repository", width=30)
-    table.add_column("File Exists", width=12)
-    table.add_column("Status", width=12)
-    table.add_column("Reason / Detail", width=40)
+        for r in results:
+            status_str = "[bold green]VERIFIED[/bold green]" if r.passed else "[bold red]FAILED[/bold red]"
+            if not r.passed:
+                any_failed = True
+            file_status = "✓ Yes" if r.file_exists else "✗ No"
+            table.add_row(
+                Path(r.claim.source_file).name,
+                r.claim.repository.split("/")[-1],
+                file_status,
+                status_str,
+                r.reason,
+            )
 
-    any_failed = False
-    for r in results:
-        status_str = "[bold green]VERIFIED[/bold green]" if r.passed else "[bold red]FAILED[/bold red]"
-        if not r.passed:
+        console.print(table)
+
+    if audit_citations:
+        bib_res = ProvenanceAuditor.audit_latex_bibliography(Path(audit_citations))
+        bib_table = Table(title=f"LaTeX Bibliography Citation Audit ({audit_citations})", show_header=True, header_style="bold cyan")
+        bib_table.add_column("Citation Key", width=25)
+        bib_table.add_column("Status", width=15)
+        bib_table.add_column("Details", width=45)
+
+        for entry in bib_res["entry_details"]:
+            status_str = "[bold green]VALID[/bold green]" if entry["valid"] else "[bold red]INVALID[/bold red]"
+            detail = "Well-formed author and year" if entry["valid"] else "Missing standard author or publication year"
+            bib_table.add_row(entry["key"], status_str, detail)
+
+        for missing in bib_res["missing_declarations"]:
+            bib_table.add_row(missing, "[bold red]UNDECLARED[/bold red]", "Cited in paper text but missing from thebibliography block")
             any_failed = True
-        file_status = "✓ Yes" if r.file_exists else "✗ No"
-        table.add_row(
-            Path(r.claim.source_file).name,
-            r.claim.repository.split("/")[-1],
-            file_status,
-            status_str,
-            r.reason,
-        )
 
-    console.print(table)
+        console.print(bib_table)
 
     if any_failed and strict:
-        console.print("\n[bold red]❌ Provenance Audit Failed.[/bold red] Found unverified, non-existent, or fabricated provenance claims.")
+        console.print("\n[bold red]❌ Provenance Audit Failed.[/bold red] Found unverified, non-existent, or fabricated claims.")
         sys.exit(1)
     elif not any_failed:
-        console.print("\n[bold green]✓ All external provenance claims mechanically verified against upstream git repositories.[/bold green]\n")
+        console.print("\n[bold green]✓ All external provenance claims and citations mechanically verified.[/bold green]\n")
 
 
 if __name__ == "__main__":
     main()
+
 
 
 

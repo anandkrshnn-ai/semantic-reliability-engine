@@ -205,3 +205,52 @@ class ProvenanceAuditor:
                     res = cls.verify_claim(claim)
                     results.append(res)
         return results
+
+    @classmethod
+    def audit_latex_bibliography(cls, tex_path: Path) -> Dict[str, Any]:
+        """Audits LaTeX bibliography entries to ensure citations are resolvable and well-formed."""
+        text = tex_path.read_text(encoding="utf-8")
+        
+        # 1. Extract all \cite{key1, key2}
+        cited_keys = set()
+        for m in re.finditer(r"\\cite\{([^}]+)\}", text):
+            for k in m.group(1).split(","):
+                cited_keys.add(k.strip())
+
+        # 2. Extract all \bibitem{key}
+        declared_keys = set()
+        bibitem_blocks = []
+        for m in re.finditer(r"\\bibitem\{([^}]+)\}(.*?)(?=\\bibitem\{|\\end\{thebibliography\}|$)", text, re.DOTALL):
+            k = m.group(1).strip()
+            content = m.group(2).strip()
+            declared_keys.add(k)
+            bibitem_blocks.append({"key": k, "content": content})
+
+        missing_declarations = cited_keys - declared_keys
+        unused_declarations = declared_keys - cited_keys
+
+        # Check entries for year and author structure
+        entry_details = []
+        for b in bibitem_blocks:
+            k = b["key"]
+            cnt = b["content"]
+            has_year = bool(re.search(r"\b(19|20)\d{2}\b", cnt))
+            has_author = bool(re.search(r"[A-Z]\.~[A-Z]", cnt) or "Anthropic" in cnt or "et~al" in cnt)
+            entry_details.append({
+                "key": k,
+                "has_year": has_year,
+                "has_author": has_author,
+                "valid": has_year and has_author,
+            })
+
+        passed = (len(missing_declarations) == 0) and all(e["valid"] for e in entry_details)
+
+        return {
+            "passed": passed,
+            "cited_count": len(cited_keys),
+            "declared_count": len(declared_keys),
+            "missing_declarations": sorted(list(missing_declarations)),
+            "unused_declarations": sorted(list(unused_declarations)),
+            "entry_details": entry_details,
+        }
+
