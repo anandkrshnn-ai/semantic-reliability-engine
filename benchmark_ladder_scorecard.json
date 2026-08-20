@@ -1,0 +1,213 @@
+{
+  "timestamp": "2026-08-20T09:29:18Z",
+  "total_models": 14,
+  "total_valid_defects": 44,
+  "summary": [
+    {
+      "tier": "Tier 0: Syntax Only",
+      "caught": 0,
+      "total": 44,
+      "catch_rate_pct": 0.0,
+      "p50_latency_ms": 0.4,
+      "p95_latency_ms": 0.76,
+      "compute_type": "sqlglot AST parse",
+      "est_cost": "$0.00"
+    },
+    {
+      "tier": "Tier 1: Minimal Structural",
+      "caught": 4,
+      "total": 44,
+      "catch_rate_pct": 9.09,
+      "p50_latency_ms": 0.26,
+      "p95_latency_ms": 0.49,
+      "compute_type": "null / unique / bounds",
+      "est_cost": "$0.00"
+    },
+    {
+      "tier": "Tier 2: Realistic dbt Suite",
+      "caught": 34,
+      "total": 44,
+      "catch_rate_pct": 77.27,
+      "p50_latency_ms": 2.44,
+      "p95_latency_ms": 5.9,
+      "compute_type": "accepted_range / values / fk / singular",
+      "est_cost": "$0.00"
+    },
+    {
+      "tier": "Tier 3: Static SCOS AST Linter",
+      "caught": 27,
+      "total": 44,
+      "catch_rate_pct": 61.36,
+      "p50_latency_ms": 0.85,
+      "p95_latency_ms": 1.34,
+      "compute_type": "Deterministic AST Compiler",
+      "est_cost": "$0.00"
+    },
+    {
+      "tier": "Tier 4: Runtime Relational Oracle",
+      "caught": 27,
+      "total": 44,
+      "catch_rate_pct": 61.36,
+      "p50_latency_ms": 2.35,
+      "p95_latency_ms": 4.6,
+      "compute_type": "DuckDB Join / Predicate Fixture",
+      "est_cost": "~$0.01 / scan"
+    }
+  ],
+  "models": [
+    {
+      "track": "Development Track",
+      "model_id": "average_order_value",
+      "total_mutations": 3,
+      "valid_defects": 3,
+      "tier_0_caught": 0,
+      "tier_1_caught": 0,
+      "tier_2_caught": 0,
+      "tier_3_caught": 2,
+      "tier_4_caught": 1
+    },
+    {
+      "track": "Development Track",
+      "model_id": "checkout_conversion_rate",
+      "total_mutations": 3,
+      "valid_defects": 3,
+      "tier_0_caught": 0,
+      "tier_1_caught": 1,
+      "tier_2_caught": 3,
+      "tier_3_caught": 2,
+      "tier_4_caught": 1
+    },
+    {
+      "track": "Development Track",
+      "model_id": "customer_churn_rate",
+      "total_mutations": 3,
+      "valid_defects": 3,
+      "tier_0_caught": 0,
+      "tier_1_caught": 1,
+      "tier_2_caught": 3,
+      "tier_3_caught": 2,
+      "tier_4_caught": 3
+    },
+    {
+      "track": "Development Track",
+      "model_id": "customer_retention_rate",
+      "total_mutations": 3,
+      "valid_defects": 3,
+      "tier_0_caught": 0,
+      "tier_1_caught": 0,
+      "tier_2_caught": 3,
+      "tier_3_caught": 2,
+      "tier_4_caught": 0
+    },
+    {
+      "track": "Development Track",
+      "model_id": "inventory_turnover",
+      "total_mutations": 3,
+      "valid_defects": 3,
+      "tier_0_caught": 0,
+      "tier_1_caught": 0,
+      "tier_2_caught": 3,
+      "tier_3_caught": 2,
+      "tier_4_caught": 1
+    },
+    {
+      "track": "Development Track",
+      "model_id": "monthly_active_users",
+      "total_mutations": 3,
+      "valid_defects": 3,
+      "tier_0_caught": 0,
+      "tier_1_caught": 1,
+      "tier_2_caught": 3,
+      "tier_3_caught": 2,
+      "tier_4_caught": 3
+    },
+    {
+      "track": "Development Track",
+      "model_id": "net_revenue",
+      "total_mutations": 5,
+      "valid_defects": 5,
+      "tier_0_caught": 0,
+      "tier_1_caught": 1,
+      "tier_2_caught": 1,
+      "tier_3_caught": 2,
+      "tier_4_caught": 5
+    },
+    {
+      "track": "Development Track",
+      "model_id": "sla_compliance_rate",
+      "total_mutations": 3,
+      "valid_defects": 3,
+      "tier_0_caught": 0,
+      "tier_1_caught": 0,
+      "tier_2_caught": 3,
+      "tier_3_caught": 2,
+      "tier_4_caught": 2
+    },
+    {
+      "track": "Frozen Holdout Track",
+      "model_id": "ad_campaign_roas",
+      "total_mutations": 3,
+      "valid_defects": 3,
+      "tier_0_caught": 0,
+      "tier_1_caught": 0,
+      "tier_2_caught": 3,
+      "tier_3_caught": 2,
+      "tier_4_caught": 1
+    },
+    {
+      "track": "Frozen Holdout Track",
+      "model_id": "b2b_saas_arr",
+      "total_mutations": 3,
+      "valid_defects": 3,
+      "tier_0_caught": 0,
+      "tier_1_caught": 0,
+      "tier_2_caught": 0,
+      "tier_3_caught": 2,
+      "tier_4_caught": 3
+    },
+    {
+      "track": "Frozen Holdout Track",
+      "model_id": "cloud_compute_burn_rate",
+      "total_mutations": 4,
+      "valid_defects": 4,
+      "tier_0_caught": 0,
+      "tier_1_caught": 0,
+      "tier_2_caught": 4,
+      "tier_3_caught": 2,
+      "tier_4_caught": 4
+    },
+    {
+      "track": "Frozen Holdout Track",
+      "model_id": "fintech_chargeback_rate",
+      "total_mutations": 3,
+      "valid_defects": 2,
+      "tier_0_caught": 0,
+      "tier_1_caught": 0,
+      "tier_2_caught": 2,
+      "tier_3_caught": 1,
+      "tier_4_caught": 2
+    },
+    {
+      "track": "Frozen Holdout Track",
+      "model_id": "hospital_readmission_rate",
+      "total_mutations": 3,
+      "valid_defects": 3,
+      "tier_0_caught": 0,
+      "tier_1_caught": 0,
+      "tier_2_caught": 3,
+      "tier_3_caught": 2,
+      "tier_4_caught": 0
+    },
+    {
+      "track": "Frozen Holdout Track",
+      "model_id": "marketplace_take_rate",
+      "total_mutations": 3,
+      "valid_defects": 3,
+      "tier_0_caught": 0,
+      "tier_1_caught": 0,
+      "tier_2_caught": 3,
+      "tier_3_caught": 2,
+      "tier_4_caught": 1
+    }
+  ]
+}
