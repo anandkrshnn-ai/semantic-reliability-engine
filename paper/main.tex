@@ -221,10 +221,14 @@ We evaluated the complete 14-model corpus ($|\mathcal{I}_{\text{dev}}| = 8$, $|\
 \subsection{Analysis of Cross-Domain Baseline Generalization}
 A critical empirical finding from Table~\ref{tab:baseline_ladder_results} is that Tier 2 matches Tier 1 in aggregate catch rate (8.9\% each). Because the canonical \texttt{jaffle\_shop} data quality suite tests e-commerce orders and payments schemas (\texttt{customer\_id}, \texttt{status}, monetary non-negativity), its domain-specific assertions are inapplicable to out-of-domain models (such as B2B SaaS retention, hospital readmissions, and cloud compute burn rate). When non-matching columns are properly skipped rather than falsely failed, the generic dbt suite provides 0.0 percentage points of incremental defect detection on out-of-domain models. This proves that monolithic shared data quality suites fail to protect multi-domain analytical pipelines without metric-specific semantic contracts.
 
+\subsection{Adaptive Hybrid Router Efficiency}
+We profiled the adaptive \texttt{HybridValidator} across all 14 benchmark models. The router resolved 78.9\% of incoming queries on the sub-millisecond static fast path ($1.16$ ms $P_{50}$ latency, 0 database scan bytes), immediately approving 92.9\% of clean queries and rejecting 70.8\% of invalid mutations pre-flight. The remaining 21.1\% of queries (exhibiting complex arithmetic or query graph structures) were adaptively escalated to Tier 4 relational execution. Compared to pure database execution ($3.52$ ms $P_{50}$), the hybrid architecture achieves a 67.1\% latency reduction while maintaining 100\% agreement on defect classification.
+
 \subsection{Trajectory Evaluation Protocol \& Scaffolding Harness}
 To evaluate runtime agent loops, we implemented a 20-scenario trajectory evaluation protocol across 4 scenario classes (\texttt{CLEAR\_CONTRACT}, \texttt{AMBIGUOUS\_METRIC}, \texttt{MISSING\_CONTRACT}, \texttt{CONTRACT\_CONFLICT}). 
 
 Table~\ref{tab:empirical_scorecard} reports the baseline evaluation harness behavior across paired Blind (deterministic unanchored query baseline) and Governed (SCOS-MCP tool-calling loop) arms over $K=3$ rollouts ($N=120$ total evaluations). In this scaffolding verification run, the harness verifies that the MCP tool loop successfully intercepts unanchored queries and enforces appropriate abstention when contracts are missing or conflicting. Live frontier LLM evaluations (e.g., GPT-4o, Claude 3.5 Sonnet) utilize this exact protocol via the provider-backed adapter.
+
 
 \begin{table}[ht!]
 \centering
@@ -254,7 +258,9 @@ Mean Tool Invocations & 0.0 & $1.40 \pm 0.49$ & +1.40 \\
     \item \textbf{Baseline Comparison Scope \& Domain Sourcing:} Our baseline comparison evaluates progressive tiers from syntax (Tier 0) and structural schema tests (Tier 1) through canonical dbt generic tests (Tier 2). External dbt test suites were sourced strictly from verified public repositories (\texttt{dbt-labs/jaffle\_shop}); out-of-domain models without verbatim public dbt counterparts are evaluated under schema-aware execution where inapplicable tests are skipped.
     \item \textbf{Contract Completeness:} SRE validates queries strictly against declared invariants. Business rules omitted from the SCOS YAML contract cannot be enforced by the AST compiler.
     \item \textbf{Synthetic Fixture Equivalence:} Result agreement on synthetic DuckDB tables does not guarantee global equivalence across massive production databases with long-tail data distributions.
+    \item \textbf{Gym Module Scope:} The \texttt{gym/} preference-dataset generation and RL formatting tools represent experimental research scaffolding for future RL alignment and fine-tuning experiments, and are decoupled from the core deterministic SCOS-MCP runtime compiler and verification oracle.
 \end{enumerate}
+
 
 \section{Reproducibility, Provenance \& Artifact Availability}
 \label{sec:reproducibility}

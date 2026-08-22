@@ -1,0 +1,142 @@
+{
+  "total_evaluations": 38,
+  "unmutated_clean_queries": 14,
+  "valid_semantic_mutations": 24,
+  "fast_path_static_total": 30,
+  "fast_path_static_rate_pct": 78.95,
+  "fast_path_static_approvals": 13,
+  "fast_path_static_rejections": 17,
+  "escalated_total": 3,
+  "escalated_rate_pct": 21.05,
+  "hybrid_latency_p50_ms": 1.16,
+  "pure_runtime_latency_p50_ms": 3.521,
+  "speedup_pct": 67.06,
+  "models": [
+    {
+      "track": "Development Track",
+      "model_id": "average_order_value",
+      "valid_mutations": 1,
+      "fast_path_rejections": 1,
+      "escalated_rejections": 0,
+      "total_caught": 1,
+      "p50_latency_ms": 1.033
+    },
+    {
+      "track": "Development Track",
+      "model_id": "checkout_conversion_rate",
+      "valid_mutations": 0,
+      "fast_path_rejections": 0,
+      "escalated_rejections": 0,
+      "total_caught": 0,
+      "p50_latency_ms": 0.0
+    },
+    {
+      "track": "Development Track",
+      "model_id": "customer_churn_rate",
+      "valid_mutations": 2,
+      "fast_path_rejections": 2,
+      "escalated_rejections": 0,
+      "total_caught": 2,
+      "p50_latency_ms": 1.138
+    },
+    {
+      "track": "Development Track",
+      "model_id": "customer_retention_rate",
+      "valid_mutations": 0,
+      "fast_path_rejections": 0,
+      "escalated_rejections": 0,
+      "total_caught": 0,
+      "p50_latency_ms": 0.0
+    },
+    {
+      "track": "Development Track",
+      "model_id": "inventory_turnover",
+      "valid_mutations": 1,
+      "fast_path_rejections": 1,
+      "escalated_rejections": 0,
+      "total_caught": 1,
+      "p50_latency_ms": 0.897
+    },
+    {
+      "track": "Development Track",
+      "model_id": "monthly_active_users",
+      "valid_mutations": 2,
+      "fast_path_rejections": 2,
+      "escalated_rejections": 0,
+      "total_caught": 2,
+      "p50_latency_ms": 1.22
+    },
+    {
+      "track": "Development Track",
+      "model_id": "net_revenue",
+      "valid_mutations": 4,
+      "fast_path_rejections": 2,
+      "escalated_rejections": 2,
+      "total_caught": 4,
+      "p50_latency_ms": 7.928
+    },
+    {
+      "track": "Development Track",
+      "model_id": "sla_compliance_rate",
+      "valid_mutations": 2,
+      "fast_path_rejections": 1,
+      "escalated_rejections": 0,
+      "total_caught": 1,
+      "p50_latency_ms": 1.217
+    },
+    {
+      "track": "Frozen Holdout Track",
+      "model_id": "ad_campaign_roas",
+      "valid_mutations": 1,
+      "fast_path_rejections": 1,
+      "escalated_rejections": 0,
+      "total_caught": 1,
+      "p50_latency_ms": 0.793
+    },
+    {
+      "track": "Frozen Holdout Track",
+      "model_id": "b2b_saas_arr",
+      "valid_mutations": 3,
+      "fast_path_rejections": 2,
+      "escalated_rejections": 0,
+      "total_caught": 2,
+      "p50_latency_ms": 1.119
+    },
+    {
+      "track": "Frozen Holdout Track",
+      "model_id": "cloud_compute_burn_rate",
+      "valid_mutations": 4,
+      "fast_path_rejections": 2,
+      "escalated_rejections": 0,
+      "total_caught": 2,
+      "p50_latency_ms": 1.012
+    },
+    {
+      "track": "Frozen Holdout Track",
+      "model_id": "fintech_chargeback_rate",
+      "valid_mutations": 3,
+      "fast_path_rejections": 2,
+      "escalated_rejections": 0,
+      "total_caught": 2,
+      "p50_latency_ms": 1.214
+    },
+    {
+      "track": "Frozen Holdout Track",
+      "model_id": "hospital_readmission_rate",
+      "valid_mutations": 0,
+      "fast_path_rejections": 0,
+      "escalated_rejections": 0,
+      "total_caught": 0,
+      "p50_latency_ms": 0.0
+    },
+    {
+      "track": "Frozen Holdout Track",
+      "model_id": "marketplace_take_rate",
+      "valid_mutations": 1,
+      "fast_path_rejections": 1,
+      "escalated_rejections": 0,
+      "total_caught": 1,
+      "p50_latency_ms": 1.055
+    }
+  ]
+}
