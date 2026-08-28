@@ -1,7 +1,7 @@
 import pytest
 import sqlglot
-from semantic_reliability.mutations.engine import MutationEngine
-from semantic_reliability.mutations.mutators import MutationType
+from semantic_reliability.testing.mutations.engine import MutationEngine
+from semantic_reliability.testing.mutations.mutators import MutationType
 
 BASE_SQL = """
 SELECT

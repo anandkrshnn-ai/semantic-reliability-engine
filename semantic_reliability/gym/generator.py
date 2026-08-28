@@ -9,7 +9,7 @@ import sqlglot
 from sqlglot import exp
 
 from semantic_reliability.compiler.schema import MetricDefinition
-from semantic_reliability.mutations.engine import MutationEngine
+from semantic_reliability.testing.mutations.engine import MutationEngine
 from semantic_reliability.compiler.contracts import SemanticContractValidator
 from .models import (
     GymExample,

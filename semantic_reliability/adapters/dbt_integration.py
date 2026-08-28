@@ -6,8 +6,8 @@ from typing import Tuple, Dict, Any, List
 
 from semantic_reliability.compiler.compiler import MetricCompiler
 from semantic_reliability.compiler.schema import MetricDefinition
-from semantic_reliability.drift.detector import SemanticDriftDetector
-from semantic_reliability.drift.rules import DriftSeverity, SemanticDrift
+from semantic_reliability.testing.drift.detector import SemanticDriftDetector
+from semantic_reliability.testing.drift.rules import DriftSeverity, SemanticDrift
 
 
 class NodeResolutionStatus(str, Enum):

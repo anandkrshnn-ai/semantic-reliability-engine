@@ -1,6 +1,6 @@
 import pytest
-from semantic_reliability.drift.normalizer import ASTNormalizer
-from semantic_reliability.drift.detector import SemanticDriftDetector
+from semantic_reliability.testing.drift.normalizer import ASTNormalizer
+from semantic_reliability.testing.drift.detector import SemanticDriftDetector
 import sqlglot
 
 

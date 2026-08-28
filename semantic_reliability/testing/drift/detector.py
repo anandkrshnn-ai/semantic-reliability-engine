@@ -2,8 +2,8 @@ from typing import List, Optional, Tuple, Dict, Any
 import sqlglot
 from sqlglot import exp
 
-from semantic_reliability.drift.rules import SemanticDrift, DriftSeverity, DriftType
-from semantic_reliability.drift.normalizer import ASTNormalizer
+from semantic_reliability.testing.drift.rules import SemanticDrift, DriftSeverity, DriftType
+from semantic_reliability.testing.drift.normalizer import ASTNormalizer
 
 
 class SemanticDriftDetector:

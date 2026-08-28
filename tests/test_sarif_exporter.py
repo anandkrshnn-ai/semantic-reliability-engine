@@ -2,7 +2,7 @@ import pytest
 import json
 from pathlib import Path
 from semantic_reliability.harness.sarif_exporter import SARIFExporter
-from semantic_reliability.drift.detector import SemanticDriftDetector
+from semantic_reliability.testing.drift.detector import SemanticDriftDetector
 
 BASE_SQL = "SELECT * FROM t WHERE status = 'active'"
 CAND_SQL = "SELECT * FROM t"

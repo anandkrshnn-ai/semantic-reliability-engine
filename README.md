@@ -19,60 +19,93 @@ Standard out-of-the-box structural data quality tests (`not_null`, `unique`, `ro
 
 ---
 
-## 🏗️ Architecture & Conceptual Split
+## 🏗️ Architecture & Control Plane
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Semantic-SQL-Bench                                │
-│  - 14-Contract Corpus (Dev: n=8, Frozen Holdout: n=6)                       │
-│  - 5 AST Mutation Chaos Operators (Filter Drop, Grain Shift, Agg Swap...)    │
-│  - DuckDB Ground-Truth Fixture Execution Oracles                            │
-│  - 20-Scenario Trajectory Evaluation Protocol & Replay Engine               │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │
-            ┌──────────────────────────┴──────────────────────────┐
-            ▼                                                     ▼
-┌───────────────────────────────┐     ┌───────────────────────────────────────┐
-│     SCOS Specification        │     │       SCOS Reference Engine           │
-│  - Declarative YAML Schema    │     │  - sqlglot AST Invariant Normalizer   │
-│  - Mathematical Invariant Grammar│  │  - Read-Only SCOS MCP Server 2.0      │
-│  - Portable JSON Schema v1.0  │     │  - Static Pre-flight Linting vs Engine│
-└───────────────────────────────┘     └───────────────────────────────────────┘
+```mermaid
+flowchart LR
+    UserPrompt[User Prompt] --> LLMAgent[AI Agent / Text-to-SQL]
+    LLMAgent --> GeneratedSQL[Generated SQL]
+    
+    subgraph SRE [Semantic Reliability Engine]
+        direction TB
+        SCOSContract[SCOS Metric Contract] --> ASTCompiler[AST Normalizer]
+        GeneratedSQL --> Guardrail[Semantic Invariant Guardrail]
+        ASTCompiler --> Guardrail
+    end
+    
+    Guardrail -->|Valid| DataWarehouse[(BigQuery / ClickHouse / DuckDB)]
+    Guardrail -->|Drift / Invariant Violation| Feedback[Agent Self-Correction / Retry]
 ```
+
+### 📐 How SRE Calculates Semantic Drift ($D_{sem}$)
+Instead of probabilistic LLM-as-a-judge patterns, SRE uses deterministic **Abstract Syntax Tree (AST) normalization**. The semantic invariant distance between candidate SQL and the metric contract is computed as:
+
+$$D_{sem} = 1 - \frac{\vert{} N_{agent} \cap N_{contract} \vert{}}{\vert{} N_{agent} \cup N_{contract} \vert{}}$$
+
+Where $D_{sem} \in [0, 1]$. A score of $0.0$ indicates strict adherence to business invariants, while $D_{sem} > 0.0$ triggers an immediate block or feedback loop before execution.
 
 ---
 
 ## 🚀 Quickstart
 
-### 1. Installation
-```bash
-git clone https://github.com/anandkrshnn-ai/semantic-reliability-engine.git
-cd semantic-reliability-engine
-pip install -e .
+### 1. Python SDK (5-Line Guardrail)
+```python
+from semantic_reliability import SemanticGuardrail
+
+# Load your immutable business metric contract
+guard = SemanticGuardrail.from_contract("benchmark_corpus/dev/net_revenue/contract.yaml")
+
+# Evaluate agent-generated SQL prior to execution
+result = guard.verify("SELECT SUM(amount) FROM transactions WHERE status = 'active'")
+
+if not result.is_valid:
+    print(f"Semantic Drift Detected (Score: {result.drift_score:.2f}):")
+    for violation in result.violations:
+        print(f" - {violation}")
 ```
 
-### 2. Validate a Metric Contract
+### 2. LangChain & LangGraph SQL Agent Tool Wrapper
+Automatically intercepts agent queries and provides self-correction diagnostics to the LLM scratchpad:
+```python
+from langchain_community.agent_toolkits import create_sql_agent
+from semantic_reliability.integrations.langchain import SREGuardrailToolWrapper
+
+# Wrap any database execution tool
+guarded_sql_tool = SREGuardrailToolWrapper(
+    base_tool=db_tool,
+    contract_path="benchmark_corpus/dev/net_revenue/contract.yaml",
+    raise_on_drift=False  # Returns feedback directly to agent for self-correction!
+)
+```
+
+### 3. LiteLLM Proxy Middleware
+Enforce zero-code-change semantic guardrailing across your enterprise LLM proxy:
+```python
+import litellm
+from semantic_reliability.integrations.litellm import SRELiteLLMGuardrail
+
+guardrail = SRELiteLLMGuardrail(contract_path="benchmark_corpus/dev/net_revenue/contract.yaml")
+litellm.callbacks = [guardrail]
+```
+
+---
+
+## 💻 CLI & MCP Server Usage
+
+### Validate a Metric Contract
 ```bash
 sre compile --contract benchmark_corpus/dev/net_revenue/contract.yaml
 ```
 
-### 3. Launch the Read-Only SCOS MCP Server
+### Launch the Read-Only SCOS MCP Server
 ```bash
 sre mcp-serve --contracts benchmark_corpus/dev --port 8000
 ```
 
-### 4. Run the Local Demonstration
-```bash
-python demo/agent.py
-```
-
-### 5. Run Live Agent Benchmark & Trajectory Replay
+### Run Live Agent Benchmark & Trajectory Replay
 ```bash
 # Run paired evaluation with an LLM provider (OpenAI, Anthropic, Ollama, or mock scaffolding)
 sre benchmark-live --provider mock --rollouts 3 --output benchmark_scorecard.json --trajectories-out runs/trajectories.jsonl
-
-# Or with a real model endpoint:
-# sre benchmark-live --provider openai --model gpt-4o --rollouts 3
 
 # Zero-compute offline trajectory replay against updated contracts
 sre benchmark-replay --trajectories runs/trajectories.jsonl --contracts benchmark_corpus --output replay_scorecard.json

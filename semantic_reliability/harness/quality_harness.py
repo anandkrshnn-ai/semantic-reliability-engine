@@ -1,8 +1,8 @@
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 
-from semantic_reliability.mutations.engine import MutationEngine
-from semantic_reliability.mutations.mutators import MutationResult, MutationType
+from semantic_reliability.testing.mutations.engine import MutationEngine
+from semantic_reliability.testing.mutations.mutators import MutationResult, MutationType
 
 
 class TestCheckResult(BaseModel):

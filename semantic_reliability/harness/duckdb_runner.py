@@ -6,7 +6,7 @@ from pathlib import Path
 from enum import Enum
 from pydantic import BaseModel, Field
 
-from semantic_reliability.mutations.mutators import MutationResult, MutationType
+from semantic_reliability.testing.mutations.mutators import MutationResult, MutationType
 from semantic_reliability.assertions.base import AssertionResult, DataAssertion
 from semantic_reliability.assertions.registry import AssertionSuite
 

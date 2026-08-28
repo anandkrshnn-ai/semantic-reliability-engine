@@ -1,7 +1,7 @@
 from typing import List, Optional
 from pathlib import Path
 
-from semantic_reliability.drift.rules import SemanticDrift, DriftSeverity
+from semantic_reliability.testing.drift.rules import SemanticDrift, DriftSeverity
 from semantic_reliability.harness.quality_harness import MutationBenchmark
 
 

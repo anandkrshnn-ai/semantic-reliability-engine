@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 import yaml
 import pandas as pd
 from semantic_reliability.compiler.schema import MetricDefinition
-from semantic_reliability.mutations.engine import MutationEngine
+from semantic_reliability.testing.mutations.engine import MutationEngine
 from semantic_reliability.harness.duckdb_runner import DuckDBFixtureRunner, MutationClassification
 from semantic_reliability.assertions.registry import AssertionSuite
 from semantic_reliability.assertions.semantic import MetricValueAssertion, RequiredPopulationAssertion

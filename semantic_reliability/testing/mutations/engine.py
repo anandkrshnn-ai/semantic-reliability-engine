@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple, Dict, Any
 import sqlglot
 from sqlglot import exp
 
-from semantic_reliability.mutations.mutators import MutationType, MutationResult
+from semantic_reliability.testing.mutations.mutators import MutationType, MutationResult
 
 
 class MutationEngine:

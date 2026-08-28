@@ -2,7 +2,7 @@ import json
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
-from semantic_reliability.drift.rules import SemanticDrift, DriftSeverity
+from semantic_reliability.testing.drift.rules import SemanticDrift, DriftSeverity
 from semantic_reliability.compiler.contracts import ContractEvaluationResult
 
 

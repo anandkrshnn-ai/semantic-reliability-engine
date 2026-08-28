@@ -1,7 +1,7 @@
 import pytest
 from semantic_reliability.harness.quality_harness import QualityHarness
 from semantic_reliability.harness.reporter import Reporter
-from semantic_reliability.drift.detector import SemanticDriftDetector
+from semantic_reliability.testing.drift.detector import SemanticDriftDetector
 
 BASE_SQL = """
 SELECT

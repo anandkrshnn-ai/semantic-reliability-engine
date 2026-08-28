@@ -1,6 +1,6 @@
 import pytest
-from semantic_reliability.drift.detector import SemanticDriftDetector
-from semantic_reliability.drift.rules import DriftSeverity, DriftType
+from semantic_reliability.testing.drift.detector import SemanticDriftDetector
+from semantic_reliability.testing.drift.rules import DriftSeverity, DriftType
 
 BASE_SQL = """
 SELECT

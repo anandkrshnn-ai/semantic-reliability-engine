@@ -4,7 +4,6 @@ import sqlglot
 from sqlglot import exp
 
 from semantic_reliability.compiler.schema import MetricDefinition, SemanticInvariants
-from semantic_reliability.drift.rules import SemanticDrift, DriftSeverity, DriftType
 
 
 class ContractViolation(BaseModel):

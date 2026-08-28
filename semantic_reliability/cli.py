@@ -20,9 +20,9 @@ console = Console(force_terminal=True, legacy_windows=False)
 
 from semantic_reliability.compiler.compiler import MetricCompiler
 from semantic_reliability.compiler.contracts import SemanticContractValidator
-from semantic_reliability.drift.detector import SemanticDriftDetector
-from semantic_reliability.drift.rules import DriftSeverity
-from semantic_reliability.mutations.engine import MutationEngine
+from semantic_reliability.testing.drift.detector import SemanticDriftDetector
+from semantic_reliability.testing.drift.rules import DriftSeverity
+from semantic_reliability.testing.mutations.engine import MutationEngine
 from semantic_reliability.assertions.registry import AssertionSuite
 from semantic_reliability.harness.duckdb_runner import (
     DuckDBFixtureRunner,
@@ -745,7 +745,7 @@ def dbt_check(manifest, model, contract, fail_on, output_json, output_sarif):
     """Check a compiled dbt model for semantic drift against a metric contract."""
     from semantic_reliability.adapters.dbt_integration import DbtSreChecker
     from semantic_reliability.harness.sarif_exporter import SARIFExporter
-    from semantic_reliability.drift.rules import DriftSeverity, SemanticDrift
+    from semantic_reliability.testing.drift.rules import DriftSeverity, SemanticDrift
 
     checker = DbtSreChecker(manifest)
     result = checker.check(model, contract)
@@ -933,7 +933,7 @@ def benchmark_live(contracts, output, trajectories_out, artifacts_dir, provider,
     scorecard = evaluator.compute_scorecard(blind_trajectories, gov_trajectories)
     scorecard["run_mode"] = "SYNTHETIC_SIMULATION" if is_synthetic else "LIVE_MODEL_EVALUATION"
     scorecard["provider"] = provider
-    scorecard["model"] = model
+    scorecard["model"] = "mock-synthetic-scaffold" if is_synthetic else model
 
     out_p = Path(output)
     out_p.parent.mkdir(parents=True, exist_ok=True)

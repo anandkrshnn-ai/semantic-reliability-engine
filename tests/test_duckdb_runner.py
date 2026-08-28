@@ -1,6 +1,6 @@
 import pytest
 from semantic_reliability.harness.duckdb_runner import DuckDBFixtureRunner, MutationClassification
-from semantic_reliability.mutations.engine import MutationEngine
+from semantic_reliability.testing.mutations.engine import MutationEngine
 
 BASE_SQL = """
 SELECT
