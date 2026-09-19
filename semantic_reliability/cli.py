@@ -1014,11 +1014,27 @@ def audit_provenance_cmd(target_dir, audit_citations, strict):
 
         console.print(bib_table)
 
+    internal_docs_res = ProvenanceAuditor.audit_internal_docs_assertions()
+    if internal_docs_res["details"]:
+        docs_table = Table(title="Internal Docs Assertion Audit", show_header=True, header_style="bold blue")
+        docs_table.add_column("Model", width=25)
+        docs_table.add_column("Assertion", width=50)
+        docs_table.add_column("Status", width=15)
+        docs_table.add_column("Details", width=40)
+
+        for det in internal_docs_res["details"]:
+            status_str = "[bold green]VALID[/bold green]" if det["status"] == "VALID" else "[bold red]FAILED[/bold red]"
+            docs_table.add_row(det["model"], det["assertion"], status_str, det["reason"])
+            if det["status"] == "FAILED":
+                any_failed = True
+                
+        console.print(docs_table)
+
     if any_failed and strict:
         console.print("\n[bold red]❌ Provenance Audit Failed.[/bold red] Found unverified, non-existent, or fabricated claims.")
         sys.exit(1)
     elif not any_failed:
-        console.print("\n[bold green]✓ All external provenance claims and citations mechanically verified.[/bold green]\n")
+        console.print("\n[bold green]✓ All external provenance claims, citations, and internal docs assertions mechanically verified.[/bold green]\n")
 
 
 if __name__ == "__main__":

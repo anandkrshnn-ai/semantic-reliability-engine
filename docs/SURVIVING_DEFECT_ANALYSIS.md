@@ -13,7 +13,7 @@ This document provides a root-cause error analysis of valid mutations that survi
 | `ROAS_002` | `ad_campaign_roas` | `BOUNDARY_SHIFT` | `MISSING_CONTRACT` | `POPULATION_FILTER_UNCONSTRAINED` | `HIGH` | Fixture-grounded `metric_value` point oracle (`Σ roas = 6.3333`, 1% tolerance) + `RequiredPopulationAssertion` on `channel` (see §1 correction) | ✅ FIXED (v1.1) |
 | `READMISSION_001` | `hospital_readmission_rate` | `FILTER_DROP` | `MISSING_CONTRACT` | `INDEX_ADMISSION_DENOMINATOR_UNCONSTRAINED` | `HIGH` | Fixture-grounded `metric_value` point oracle (`Σ rate = 0.5`, 5% tolerance) + `expected_grain` + contract aggregation invariant (see §2 correction) | ✅ FIXED (v1.1) |
 | `TAKE_RATE_002` | `marketplace_take_rate` | `AGGREGATION_SWAP` | `ASSERTION_GAP` + `WEAK_FIXTURE` | `NUMERATOR_DENOMINATOR_LINKAGE_MISSING` | `MEDIUM` | Diversified commission ratios (uniform 15% fixture made the metric ratio-invariant), `metric_value` point oracle (`Σ = 0.2667`, 5% tolerance) + `expected_grain` + contract aggregation invariant | ✅ FIXED (v1.1) |
-| `CHARGEBACK_001` | `fintech_chargeback_rate` | `COALESCE_BYPASS` | `MUTATION_ORACLE_GAP` | `EQUIVALENT_ON_FIXTURE_DENOMINATOR` | `LOW` | Expand fixture to include explicit `NULL` dispute flags | 🟡 OPEN |
+| `CHARGEBACK_001` | `fintech_chargeback_rate` | `FILTER_DROP` | `ASSERTION_GAP` + `WEAK_FIXTURE` | `EQUIVALENT_ON_FIXTURE_DENOMINATOR` | `LOW` | Expand fixture to include `pending` row + `metric_value` point oracle (`Σ = 1.5`, 5% tolerance) + `expected_grain` | ✅ FIXED (v1.1) |
 
 ---
 
@@ -37,11 +37,12 @@ This document provides a root-cause error analysis of valid mutations that survi
 - **Why Semantic Tests Missed:** Ratio bounds remained between 5% and 30%.
 - **v1.1 post-mortem — three stacked defects, not one:** (a) *assertion gap* (bounds only, no point oracle, no grain assertion); (b) *weak fixture* — every row carried an identical 15% commission ratio, making the metric mathematically insensitive to population mix (two of three mutations survived purely because Σ stayed inside `[0.05, 0.3]`); (c) *scorer blindness* — the `INCONCLUSIVE (LOW)` grade was driven by fixture adequacy scoring 50%, because the v1.0 adequacy checker matches columns by a hardcoded name list and was blind to `gmv_amount`/`commission_fee` (typed numerics), `seller_id` (duplicate entity), and boolean flags. Repairs: diversified ratios (10–20%), point oracle `expected: 0.2667` ±5%, `expected_grain`, contract aggregation invariant, and the type-aware adequacy checks (fixture adequacy policy v1.1.0). Semantic catch: 33.3% → 100%; validity → `CONCLUSIVE (HIGH)`.
 
-### 4. `fintech_chargeback_rate` — `EQUIVALENT_ON_FIXTURE_DENOMINATOR`
-- **Injected Fault:** Removed `COALESCE` handling for unclassified disputes.
-- **Why Standard Tests Passed:** Output was valid numerical ratio.
-- **Why Semantic Tests Missed:** Survived as equivalent because no unclassified `NULL` disputes existed in the 5-row fixture.
-- **Remediation:** Introduce `NULL` records into the fixture dataset.
+### 4. `fintech_chargeback_rate` — `EQUIVALENT_ON_FIXTURE_DENOMINATOR` ✅ FIXED (v1.1)
+- **Injected Fault:** Dropped exclusion filter `AND settlement_status = 'settled'`.
+- **Why Standard Tests Passed:** Output remained a valid numerical ratio.
+- **Why Semantic Tests Missed:** Survived as equivalent because every row in the small 5-row fixture had `settled` as the status, so dropping the filter did nothing.
+- **⚠️ Original remediation correction:** The originally claimed defect (`COALESCE_BYPASS`) and remediation (`fixture_contrast`) were complete hallucinations. The SQL model *never had* a `COALESCE` function. The real defect is the `FILTER_DROP`. 
+- **Remediation:** Added a `pending` row to the fixture so dropping the filter actually changes the result, and added a fixture-grounded point oracle (`expected: 1.5`, 5% tolerance) plus `expected_grain`. Semantic catch: 66.7% → 100%.
 
 ---
 

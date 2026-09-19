@@ -262,3 +262,107 @@ class ProvenanceAuditor:
             "entry_details": entry_details,
         }
 
+    @classmethod
+    def audit_internal_docs_assertions(cls) -> Dict[str, Any]:
+        """Audits the recommended assertions in error_analysis.py / SURVIVING_DEFECT_ANALYSIS.md 
+        by actually executing them against their respective fixtures."""
+        from semantic_reliability.harness.error_analysis import SurvivingDefectTaxonomy
+        from semantic_reliability.assertions.semantic import (
+            RequiredPopulationAssertion,
+            MetricValueAssertion,
+            ExpectedGrainAssertion,
+        )
+        from semantic_reliability.assertions.structural import (
+            NonNullOutputAssertion,
+            UniqueKeyAssertion,
+            RowCountBoundsAssertion,
+            AcceptedRangeAssertion,
+            AcceptedValuesAssertion,
+            RelationshipsAssertion,
+            SingularSqlAssertion,
+        )
+        from semantic_reliability.harness.duckdb_runner import DuckDBFixtureRunner
+        
+        # Aliases to match natural language recommendations like 'required_population'
+        allowed_globals = {
+            "RequiredPopulationAssertion": RequiredPopulationAssertion,
+            "required_population": RequiredPopulationAssertion,
+            "MetricValueAssertion": MetricValueAssertion,
+            "metric_value": MetricValueAssertion,
+            "ExpectedGrainAssertion": ExpectedGrainAssertion,
+            "expected_grain": ExpectedGrainAssertion,
+            "fixture_contrast": None, # Intentionally unsupported to catch hallucination
+            "temporal_bounds_assertion": None,
+        }
+
+        results = []
+        any_failed = False
+
+        for record in SurvivingDefectTaxonomy.KNOWN_HOLDOUT_SURVIVING_DEFECTS:
+            if record.recommended_assertion is None:
+                continue
+            # Some recommendations have extra natural language, just extract the part before the parenthesis for mapping
+            # Or handle cases with multiple assertions like "MetricValueAssertion(...) + ExpectedGrainAssertion(...)"
+            # For simplicity, we just evaluate the first assertion call found, or split by '+' if multiple
+            recs = [r.strip() for r in record.recommended_assertion.split("+")]
+            
+            for rec in recs:
+                func_name = rec.split("(")[0].strip()
+                if func_name not in allowed_globals or allowed_globals[func_name] is None:
+                    results.append({
+                        "model": record.model,
+                        "assertion": rec,
+                        "status": "FAILED",
+                        "reason": f"Unsupported or hallucinated assertion type '{func_name}'"
+                    })
+                    any_failed = True
+                    continue
+    
+                try:
+                    # Instantiate the assertion
+                    assertion_obj = eval(rec, {"__builtins__": {}}, allowed_globals)
+                    
+                    # Execute against fixture
+                    model_dir = Path("benchmark_corpus/holdout") / record.model
+                    
+                    fixtures = {}
+                    for csv_file in model_dir.glob("*.csv"):
+                        fixtures[csv_file.stem] = csv_file.as_posix()
+                    
+                    runner = DuckDBFixtureRunner(fixtures=fixtures)
+                    
+                    sql_file = model_dir / f"model_{record.model}.sql"
+                    sql = sql_file.read_text(encoding="utf-8")
+                    
+                    res = assertion_obj.evaluate(runner.con, sql)
+                    runner.close()
+    
+                    if not res.passed:
+                        results.append({
+                            "model": record.model,
+                            "assertion": rec,
+                            "status": "FAILED",
+                            "reason": f"Execution failed on fixture: {res.failure_reason}"
+                        })
+                        any_failed = True
+                    else:
+                        results.append({
+                            "model": record.model,
+                            "assertion": rec,
+                            "status": "VALID",
+                            "reason": "Successfully ran and passed against fixture"
+                        })
+                except Exception as e:
+                    results.append({
+                        "model": record.model,
+                        "assertion": rec,
+                        "status": "FAILED",
+                        "reason": f"Failed to parse or execute: {str(e)}"
+                    })
+                    any_failed = True
+
+        return {
+            "passed": not any_failed,
+            "details": results
+        }
+

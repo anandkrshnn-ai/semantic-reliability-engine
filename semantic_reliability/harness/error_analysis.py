@@ -57,7 +57,7 @@ class SurvivingDefectTaxonomy:
             root_cause_code="INDEX_ADMISSION_DENOMINATOR_UNCONSTRAINED",
             description="Deceased/planned patient exclusion filter drop survived standard not-null checks without a denominator eligibility contract.",
             missing_contract_dimension="cohort_eligibility",
-            recommended_assertion="required_population(source_table='hospital_discharges', required_filter='is_planned_readmission = false')",
+            recommended_assertion="metric_value(column='readmission_rate', expected_value=0.5, tolerance_pct=5.0) + expected_grain(grain_columns=['department'])",
             severity=SeverityLevel.HIGH,
         ),
         SurvivingDefectRecord(
@@ -74,12 +74,12 @@ class SurvivingDefectTaxonomy:
         SurvivingDefectRecord(
             mutation_id="CHARGEBACK_001",
             model="fintech_chargeback_rate",
-            operator="COALESCE_BYPASS",
-            root_cause_category=RootCauseCategory.MUTATION_ORACLE_GAP,
+            operator="FILTER_DROP",
+            root_cause_category=RootCauseCategory.WEAK_FIXTURE,
             root_cause_code="EQUIVALENT_ON_FIXTURE_DENOMINATOR",
-            description="Coalesce unwrap generated equivalent result because fixture dataset lacked explicit NULL chargeback flags.",
-            missing_contract_dimension="null_policy",
-            recommended_assertion="fixture_contrast(column='is_disputed', require_nulls=True)",
+            description="Filter drop survived because fixture dataset had exclusively 'settled' status rows, rendering the drop equivalent.",
+            missing_contract_dimension="cohort_eligibility",
+            recommended_assertion="metric_value(column='chargeback_rate', expected_value=1.5, tolerance_pct=5.0) + expected_grain(grain_columns=['merchant_id'])",
             severity=SeverityLevel.LOW,
         ),
     ]

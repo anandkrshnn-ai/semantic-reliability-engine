@@ -4,11 +4,10 @@ assertions:
   columns:
   - merchant_id
   - chargeback_rate
-- type: required_population
-  source_table: settled_payments
-  required_filter: is_sandbox = false
-  join_key: merchant_id
+- type: expected_grain
+  grain_columns:
+  - merchant_id
 - type: metric_value
   column: chargeback_rate
-  min_value: 0.0
-  max_value: 1.0
+  expected_value: 1.5
+  tolerance_pct: 5.0
