@@ -10,7 +10,7 @@ This document provides a root-cause error analysis of valid mutations that survi
 
 | Mutation ID | Holdout Model | Operator | Root Cause Category | Specific Code | Severity | Remediation | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `ROAS_002` | `ad_campaign_roas` | `BOUNDARY_SHIFT` | `MISSING_CONTRACT` | `ATTRIBUTION_WINDOW_UNDECLARED` | `HIGH` | Add `temporal_bounds_assertion(max_attribution_days=30)` | 🟡 OPEN |
+| `ROAS_002` | `ad_campaign_roas` | `BOUNDARY_SHIFT` | `MISSING_CONTRACT` | `POPULATION_FILTER_UNCONSTRAINED` | `HIGH` | Fixture-grounded `metric_value` point oracle (`Σ roas = 6.3333`, 1% tolerance) + `RequiredPopulationAssertion` on `channel` (see §1 correction) | ✅ FIXED (v1.1) |
 | `READMISSION_001` | `hospital_readmission_rate` | `FILTER_DROP` | `MISSING_CONTRACT` | `INDEX_ADMISSION_DENOMINATOR_UNCONSTRAINED` | `HIGH` | Fixture-grounded `metric_value` point oracle (`Σ rate = 0.5`, 5% tolerance) + `expected_grain` + contract aggregation invariant (see §2 correction) | ✅ FIXED (v1.1) |
 | `TAKE_RATE_002` | `marketplace_take_rate` | `AGGREGATION_SWAP` | `ASSERTION_GAP` + `WEAK_FIXTURE` | `NUMERATOR_DENOMINATOR_LINKAGE_MISSING` | `MEDIUM` | Diversified commission ratios (uniform 15% fixture made the metric ratio-invariant), `metric_value` point oracle (`Σ = 0.2667`, 5% tolerance) + `expected_grain` + contract aggregation invariant | ✅ FIXED (v1.1) |
 | `CHARGEBACK_001` | `fintech_chargeback_rate` | `COALESCE_BYPASS` | `MUTATION_ORACLE_GAP` | `EQUIVALENT_ON_FIXTURE_DENOMINATOR` | `LOW` | Expand fixture to include explicit `NULL` dispute flags | 🟡 OPEN |
@@ -19,11 +19,11 @@ This document provides a root-cause error analysis of valid mutations that survi
 
 ## 🛠️ Root-Cause Breakdown
 
-### 1. `ad_campaign_roas` — `ATTRIBUTION_WINDOW_UNDECLARED`
+### 1. `ad_campaign_roas` — `POPULATION_FILTER_UNCONSTRAINED` ✅ FIXED (v1.1)
 - **Injected Fault:** The campaign comparison boundary mutated from `is_test_campaign = false` to inclusive testing.
 - **Why Standard Tests Passed:** Output tables retained non-null columns (`channel`, `roas`), and row counts matched expected groups.
-- **Why Semantic Tests Missed:** The metric contract declared population filters but omitted a temporal attribution window invariant.
-- **Remediation:** Declare `invariants.time.attribution_window_days: 30` in `contract.yaml`.
+- **Why Semantic Tests Missed:** Survived as equivalent bounds-wise (roas stayed between 1.0 and 10.0) despite leaking the `staging_test` cohort into the metric population.
+- **⚠️ Original remediation correction:** The initially recommended `temporal_bounds_assertion(max_attribution_days=30)` was **a hallucination on this fixture** — the dataset has no temporal dimensions (dates/timestamps). The shipped repair instead adds a `RequiredPopulationAssertion` to strictly enforce `is_test_campaign = false` via the `channel` join key, plus tightens the bounds to a fixture-grounded point oracle (`expected: 6.3333`, 1% tolerance). Semantic catch: 33.3% → 100%.
 
 ### 2. `hospital_readmission_rate` — `INDEX_ADMISSION_DENOMINATOR_UNCONSTRAINED` ✅ FIXED (v1.1)
 - **Injected Fault:** Dropped exclusion filter `is_planned_readmission = false`.

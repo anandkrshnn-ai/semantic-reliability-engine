@@ -6,5 +6,9 @@ assertions:
   - roas
 - type: metric_value
   column: roas
-  min_value: 1.0
-  max_value: 10.0
+  expected: 6.3333
+  tolerance_pct: 1.0
+- type: population
+  source_table: ad_campaign_performance
+  required_filter: "is_test_campaign = false"
+  join_key: channel
