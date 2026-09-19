@@ -261,11 +261,11 @@ These are known on `main` and are part of this draft’s honesty requirements:
 
 ~~1. Freeze a single `scos_version` string in spec, JSON Schema, and every corpus contract.~~ *(Resolved in `3323f0c`)*
 ~~2. Reconcile `spec/scos-v1.schema.json` with the live corpus (currently still divergent).~~ *(Resolved in `3323f0c`)*
-3. Host the schema at a stable URL; do not cite `semantic-reliability.dev` until that host serves the file.
+~~3. Host the schema at a stable URL; do not cite `semantic-reliability.dev` until that host serves the file.~~ *(Resolved via GitHub tagged release `v1.0.0`)*
 4. Point default clone / docs at `main` (`53cd696` and later). `master` is a stale snapshot (65 commits; 112-test README).
 5. Keep live-agent adapters labeled experimental until a named-model run with frozen seeds is published.
 
-*Note: With items 1 and 2 resolved, the schema and corpus are now fully reconciled. However, external submission to NIST or Bitol should still hold until item 3 is resolved.*
+*Note: With items 1, 2, and 3 resolved, the schema is stable, hosted, and fully reconciled with the corpus. The core blockers for external submission are cleared. Items 4 and 5 remain as general project health goals.*
 
 ---
 

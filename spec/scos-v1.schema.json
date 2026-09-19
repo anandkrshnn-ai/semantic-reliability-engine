@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://semantic-reliability.dev/schemas/scos-v1.schema.json",
+  "$id": "https://raw.githubusercontent.com/anandkrshnn-ai/semantic-reliability-engine/refs/tags/v1.0.0/spec/scos-v1.schema.json",
   "title": "Semantic Contract Open Standard (SCOS) v1.0.0",
   "description": "Standard declarative schema for executable business metric contracts, semantic invariants, and runtime observability probes.",
   "type": "object",
