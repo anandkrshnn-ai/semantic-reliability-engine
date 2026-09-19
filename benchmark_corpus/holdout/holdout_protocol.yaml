@@ -1,6 +1,6 @@
 protocol_version: "1.1"
 corpus_split: "holdout"
-freeze_commit: "FILL_WITH_SHA_OF_REPAIR_COMMIT"
+freeze_commit: "7c8d8f2d1b24489855c49b16e07d95273c7242e9"
 freeze_tag: "v1.1.0-holdout-repair"
 validity_policy_version: "1.0"
 mutation_operator_version: "1.0.0"
