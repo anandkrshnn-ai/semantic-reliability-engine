@@ -28,6 +28,7 @@ from semantic_reliability.assertions.registry import AssertionSuite
 from semantic_reliability.adapters.dbt_adapter import DBTTestAdapter
 from semantic_reliability.harness.baseline_ladder import BaselineLadderEvaluator
 from semantic_reliability.harness.duckdb_runner import DuckDBFixtureRunner
+from semantic_reliability.harness.equivalence import EquivalenceOracle
 
 
 def run_benchmark():
@@ -117,14 +118,9 @@ def run_benchmark():
                     mut_df = None
                     is_executable = False
 
-                # Determine if mutation is a valid defect (differs from baseline)
                 is_equivalent = False
                 if is_executable and mut_df is not None:
-                    try:
-                        pd.testing.assert_frame_equal(base_df, mut_df, check_dtype=False)
-                        is_equivalent = True
-                    except AssertionError:
-                        is_equivalent = False
+                    is_equivalent, _ = EquivalenceOracle.check_equivalence(mut_df, base_df)
 
                 if is_equivalent:
                     continue

@@ -10,6 +10,7 @@ import sqlglot
 from semantic_reliability.compiler.schema import MetricDefinition
 from semantic_reliability.compiler.contracts import SemanticContractValidator
 from semantic_reliability.firewall.engine import ContractRegistry
+from semantic_reliability.harness.equivalence import EquivalenceOracle
 from .protocol import BenchmarkScenario
 
 
@@ -98,35 +99,5 @@ class OracleValidator:
 
     def _compare_dataframes(self, df_cand: pd.DataFrame, df_true: pd.DataFrame) -> bool:
         """Order-insensitive, numeric-tolerant canonical row dataframe comparison."""
-        if df_cand is None or df_true is None:
-            return False
-        if df_cand.empty and df_true.empty:
-            return True
-        if df_cand.empty != df_true.empty:
-            return False
-        if len(df_cand) != len(df_true) or df_cand.shape[1] != df_true.shape[1]:
-            return False
-
-        try:
-            def canonical_row(row, cols):
-                items = []
-                for c in cols:
-                    val = row[c]
-                    if pd.isna(val) or val is None:
-                        items.append(f"{c}:__NULL__")
-                    elif isinstance(val, (int, float, np.number)):
-                        rounded = round(float(val), 4)
-                        items.append(f"{c}:{rounded}")
-                    else:
-                        items.append(f"{c}:{str(val).strip()}")
-                return tuple(items)
-
-            c_cols = sorted(df_cand.columns) if set(df_cand.columns) == set(df_true.columns) else list(df_cand.columns)
-            t_cols = sorted(df_true.columns) if set(df_cand.columns) == set(df_true.columns) else list(df_true.columns)
-
-            c_rows = sorted([canonical_row(row, c_cols) for _, row in df_cand.iterrows()])
-            t_rows = sorted([canonical_row(row, t_cols) for _, row in df_true.iterrows()])
-
-            return c_rows == t_rows
-        except Exception:
-            return False
+        is_equiv, _ = EquivalenceOracle.check_equivalence(df_cand, df_true, atol=self.float_tol)
+        return is_equiv

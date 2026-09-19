@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from semantic_reliability.testing.mutations.mutators import MutationResult, MutationType
 from semantic_reliability.assertions.base import AssertionResult, DataAssertion
 from semantic_reliability.assertions.registry import AssertionSuite
+from semantic_reliability.harness.equivalence import EquivalenceOracle
 
 
 class MutationClassification(str, Enum):
@@ -148,28 +149,7 @@ class DuckDBFixtureRunner:
         row_delta = mut_rows - base_rows
 
         # 2. Check for empirical output variance on fixture data
-        is_equiv = False
-        variance_pct = 0.0
-
-        if base_rows == mut_rows and list(base_df.columns) == list(mut_df.columns):
-            try:
-                numeric_cols = base_df.select_dtypes(include=["number"]).columns
-                if len(numeric_cols) > 0:
-                    base_sum = float(base_df[numeric_cols].sum().sum())
-                    mut_sum = float(mut_df[numeric_cols].sum().sum())
-                    if base_sum != 0:
-                        variance_pct = abs(mut_sum - base_sum) / abs(base_sum) * 100.0
-                    else:
-                        variance_pct = 100.0 if mut_sum != 0 else 0.0
-
-                    if variance_pct < 0.001:
-                        is_equiv = True
-                else:
-                    is_equiv = base_df.equals(mut_df)
-            except Exception:
-                is_equiv = False
-        else:
-            variance_pct = abs(row_delta) / (base_rows if base_rows > 0 else 1.0) * 100.0
+        is_equiv, variance_pct = EquivalenceOracle.check_equivalence(mut_df, base_df)
 
         result_changed = not is_equiv
 
