@@ -9,6 +9,10 @@ invariants:
   grain:
     required_dimensions:
     - department
+  aggregation:
+    required_function: sum
+    positive_components:
+    - readmitted_30d = true
 sql: "SELECT\n  department,\n  SUM(CASE WHEN readmitted_30d = true THEN 1 ELSE 0 END)\
   \ * 1.0 / COUNT(*) AS readmission_rate\nFROM hospital_discharges\nWHERE is_planned_readmission\
   \ = false AND patient_deceased = false\nGROUP BY department"

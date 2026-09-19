@@ -1,0 +1,6 @@
+- Each CLI command is defined by decorating a function with `@main.command()` and declaring inputs exclusively through `@click.option(...)` parameters rather than positional arguments.
+- Heavy subpackages are imported lazily inside command bodies (e.g. `from semantic_reliability.harness.*`, `from semantic_reliability.benchmark.*`) to avoid importing them during package load.
+- User-facing output is rendered with `rich.console.Console` using `Panel` and `Table` objects, with severity mapped to color styles via lookup dicts keyed by enum values.
+- Command failures exit the process with non-zero codes via `sys.exit(1)` (or `sys.exit(2)` for review-required decisions) instead of raising exceptions up to the caller.
+- Programmatic guardrail usage goes through the `SemanticGuardrail` class constructors accepting multiple contract sources (file path, directory, `MetricDefinition`, dict) and exposes both a result-returning `verify()` and an exception-raising `intercept()` variant.
+- Evaluation results are wrapped in typed dataclasses (`GuardrailResult`, `EvaluateResponse`, `MutationClassification`, `DriftSeverity`) and surfaced to callers rather than returned as raw dicts.

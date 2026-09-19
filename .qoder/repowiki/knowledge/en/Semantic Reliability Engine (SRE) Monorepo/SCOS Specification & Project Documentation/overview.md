@@ -1,0 +1,1 @@
+Holds the official SCOS v1.0.0 JSON Schema and human-readable specifications, whitepapers, release notes, benchmark methodology, security threat model, and architectural documentation for the Semantic Reliability Engine.

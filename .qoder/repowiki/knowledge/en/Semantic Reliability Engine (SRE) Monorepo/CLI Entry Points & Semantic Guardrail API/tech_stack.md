@@ -1,0 +1,1 @@
+Click for CLI command registration, Rich for terminal tables/panels, DuckDB in-memory for fixture-backed evaluation, PyYAML for contract parsing, and SARIF 2.1.0 export for GitHub Code Scanning integration.

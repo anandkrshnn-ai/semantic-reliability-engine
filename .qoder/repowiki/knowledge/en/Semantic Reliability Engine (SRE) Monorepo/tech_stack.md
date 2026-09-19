@@ -1,0 +1,1 @@
+Python ≥3.10 with sqlglot for AST parsing/normalisation, pydantic for contract models, duckdb as the in-memory execution engine for both tests and benchmarks, jsonschema for SCOS contract validation, click/rich for the CLI, and pytest for the unified test harness.

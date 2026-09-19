@@ -93,6 +93,7 @@ class AssertionSuite:
                     expected_value=a_conf.get("expected") or a_conf.get("expected_value"),
                     min_value=a_conf.get("min_value"),
                     max_value=a_conf.get("max_value"),
+                    tolerance_pct=a_conf.get("tolerance_pct", 0.01),
                     name=name,
                 ))
             elif a_type in ("grain", "expected_grain"):

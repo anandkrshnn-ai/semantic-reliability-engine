@@ -4,7 +4,12 @@ assertions:
   columns:
   - department
   - readmission_rate
+- type: expected_grain
+  columns:
+  - department
 - type: metric_value
   column: readmission_rate
   min_value: 0.0
   max_value: 1.0
+  expected: 0.5
+  tolerance_pct: 5.0

@@ -6,8 +6,8 @@ from semantic_reliability.harness.protocol_verifier import ProtocolVerifier, Pro
 def test_holdout_protocol_verifier_runs():
     res = ProtocolVerifier.verify_holdout_protocol()
     assert isinstance(res, ProtocolIntegrityResult)
-    assert res.declared_protocol.get("protocol_version") == "1.0"
-    assert res.declared_protocol.get("freeze_tag") == "v1.0.0-phase7"
+    assert res.declared_protocol.get("protocol_version") == "1.1"
+    assert res.declared_protocol.get("freeze_tag") == "v1.1.0-holdout-repair"
 
 
 def test_holdout_protocol_detects_mismatched_commit(tmp_path):

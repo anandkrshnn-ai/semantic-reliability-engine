@@ -42,7 +42,7 @@ Instead of probabilistic LLM-as-a-judge patterns, SRE uses deterministic **Abstr
 
 $$D_{sem} = 1 - \frac{\vert{} N_{agent} \cap N_{contract} \vert{}}{\vert{} N_{agent} \cup N_{contract} \vert{}}$$
 
-Where $D_{sem} \in [0, 1]$. A score of $0.0$ indicates strict adherence to business invariants, while $D_{sem} > 0.0$ triggers an immediate block or feedback loop before execution.
+Where $D_{sem} \in [0, 1]$. Node sets are extracted after AST normalization — formatting, aliases, and commutative predicate ordering are canonicalized away — so $D_{sem} = 0.0$ indicates structural identity with the contract after normalization. The score is reported alongside each decision; blocking itself is driven by the invariant checker and policy engine.
 
 ---
 
@@ -121,7 +121,9 @@ sre benchmark-replay --trajectories runs/trajectories.jsonl --contracts benchmar
 | [**SCOS JSON Schema**](spec/scos-v1.schema.json) | Draft 2020-12 machine-readable contract validation schema. |
 | [**Enterprise Architecture & CISO Whitepaper**](docs/ENTERPRISE_ARCHITECTURE_AND_CISO_WHITEPAPER.md) | Technical control plane reference with STRIDE threat matrix and Appendix A empirical results. |
 | [**MCP Security & Threat Model**](docs/MCP_SECURITY_AND_THREAT_MODEL.md) | Read-only boundary specifications and signed cryptographic audit checkpoints. |
-| [**BigQuery & dbt FinOps Guide**](docs/DBT_AND_BIGQUERY_FINOPS_GUIDE.md) | Pre-execution compute cost estimation and CI/CD GitHub Action integration. |
+| [**Benchmark Methodology**](docs/BENCHMARK_METHODOLOGY.md) | Mutation operator taxonomy, validity grading policy, and dual-track protocol. |
+| [**Surviving Defect Analysis**](docs/SURVIVING_DEFECT_ANALYSIS.md) | Root-cause post-mortems for surviving mutations, including the v1.1 holdout repairs. |
+| [**Release Notes v1.1.0**](docs/RELEASE_NOTES_v1.1.0.md) | Holdout protocol amendment: assertion-registry, adequacy-scorer, and corpus repairs. |
 | [**Research Paper (LaTeX)**](paper/main.tex) | Complete academic research paper for peer-reviewed evaluation tracks. |
 | [**Launch Manifesto**](docs/SCOS_LAUNCH_MANIFESTO.md) | Public vision for open semantic contract governance in agentic analytics. |
 
@@ -129,7 +131,7 @@ sre benchmark-replay --trajectories runs/trajectories.jsonl --contracts benchmar
 
 ## 🧪 Testing & Verification
 
-The test suite contains **112 automated unit tests** covering the AST compiler, mutation operators, reality probes, BigQuery dry-run adapter, MCP JSON-RPC server, signed checkpoints, and trajectory replay:
+The test suite contains **144 automated unit tests** covering the AST compiler, mutation operators, reality probes, BigQuery dry-run adapter, MCP JSON-RPC server, signed checkpoints, and trajectory replay:
 
 ```bash
 pytest tests/ -v
@@ -141,7 +143,7 @@ pytest tests/ -v
 
 This repository was developed with substantial AI-assisted coding in an exploratory session. Human review and independent empirical verification are ongoing. 
 
-- **Verified Core:** The AST mutation engine (`semantic_reliability/mutations`), DuckDB fixture test harness, 14-contract benchmark corpus, and the 112-test unit test suite have been independently executed and verified. The reported holdout mutation catch rate (+61.1 pp) reflects code-path reproducibility against the specified minimal structural baseline (`not_null`, `unique_key`, `row_count_bounds`).
+- **Verified Core:** The AST mutation engine (`semantic_reliability/testing/mutations`), DuckDB fixture test harness, 14-contract benchmark corpus, and the 144-test unit test suite have been independently executed and verified. Reported holdout results: the v1.0 frozen run (+61.1 pp semantic gain) is reproducible at tag `v1.0.0-phase7`; the v1.1 amended protocol (`v1.1.0-holdout-repair`) — assertion-registry tolerance repair, two documented corpus repairs, and type-aware fixture adequacy — raises the run to **+88.9 pp** (standard 0.0% vs semantic 88.9%, zero `INCONCLUSIVE` models). Both grades are versioned in [holdout_protocol.yaml](benchmark_corpus/holdout/holdout_protocol.yaml); neither supersedes the other silently.
 - **Experimental / Scaffolding Modules:** The `gym/` dataset formatting module, live agent loop adapters (`adapters/`), and enterprise governance collateral (CISO whitepaper, cryptographic audit envelope, and FinOps guides) represent research scaffolding and exploratory prototypes. They should not be treated as externally audited enterprise platforms or live model evaluations beyond the exact procedures documented in the repository.
 
 ---

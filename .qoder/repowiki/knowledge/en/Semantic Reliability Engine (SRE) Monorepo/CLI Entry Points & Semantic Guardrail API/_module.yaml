@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: cli_and_core
+title: CLI Entry Points & Semantic Guardrail API
+scope:
+    - semantic_reliability/cli.py
+    - semantic_reliability/guardrail.py
+    - semantic_reliability/__init__.py
+source_files: []
+depends_on: []
+related_to:
+    - path: demo_and_deploy

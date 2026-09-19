@@ -1,0 +1,4 @@
+- Containers run as a dedicated non-root user (`appuser:appgroup`) with all Linux capabilities dropped and `no-new-privileges:true` enabled.
+- Resource constraints are specified per service using both `requests` and `limits` blocks (CPU and memory) for predictable scheduling.
+- Health monitoring is exposed via HTTP endpoints (`/health` for Kubernetes probes, socket check on port 8000 for Docker HEALTHCHECK).
+- Metric contracts are externalized as YAML files loaded at runtime from a configurable directory rather than being embedded in code.

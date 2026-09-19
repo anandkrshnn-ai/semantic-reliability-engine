@@ -1,0 +1,1 @@
+Provides the Click-based CLI surface (check, mutate, benchmark, probe, etc.) and a programmatic SemanticGuardrail API that enforces SCOS metric contracts on generated SQL before execution.

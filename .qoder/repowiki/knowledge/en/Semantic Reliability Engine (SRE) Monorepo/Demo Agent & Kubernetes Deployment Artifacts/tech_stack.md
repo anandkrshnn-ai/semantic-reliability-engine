@@ -1,0 +1,1 @@
+Python 3.11 slim base image; Uvicorn ASGI server for the firewall sidecar; Docker Compose v3.8 for local orchestration; Kubernetes v1 apps/v1 Deployment + ConfigMap for production-style sidecar deployment.

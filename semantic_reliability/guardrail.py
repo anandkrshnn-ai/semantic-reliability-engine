@@ -8,6 +8,7 @@ from semantic_reliability.compiler.schema import MetricDefinition
 from semantic_reliability.firewall.engine import ContractRegistry, SemanticEvaluator
 from semantic_reliability.firewall.models import EvaluateRequest, EvaluateResponse, Decision, RiskLevel
 from semantic_reliability.testing.drift.detector import SemanticDriftDetector
+from semantic_reliability.testing.drift.distance import semantic_drift_distance
 
 
 class SemanticDriftException(Exception):
@@ -116,12 +117,16 @@ class SemanticGuardrail:
         if not resp.contract_compliant and not violations_formatted:
             violations_formatted = [resp.message or "Query violates semantic contract."]
 
-        if resp.contract_compliant and resp.decision == Decision.ALLOW:
-            drift_score = 0.0
-        else:
-            # Scaled penalty based on severity and number of invariant violations
-            num_violations = len(resp.violations)
-            drift_score = min(1.0, 0.4 + (0.2 * num_violations)) if num_violations > 0 else 1.0
+        try:
+            definition, _version = self.registry.get(target_metric)
+            drift_score = semantic_drift_distance(
+                candidate_sql=sql,
+                contract_sql=definition.sql,
+                candidate_dialect=dialect,
+                contract_dialect=definition.dialect or dialect,
+            )
+        except Exception:
+            drift_score = 1.0 if not resp.contract_compliant else 0.0
 
         return GuardrailResult(
             is_valid=(resp.decision == Decision.ALLOW),

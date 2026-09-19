@@ -1,0 +1,3 @@
+- SCOS metric contracts are authored as YAML files under `benchmark_corpus/` and `examples/` and validated against the canonical JSON Schema in `docs/spec/scos-v1.schema.json` before use.
+- All evaluation paths (CLI, programmatic API, MCP server, demo agent, scripts) consume the same `SemanticGuardrail.from_contract(...)` interface rather than re-implementing drift calculation.
+- Tests target in-memory DuckDB instances seeded with fixture CSVs instead of relying on external databases, keeping the suite self-contained and reproducible.

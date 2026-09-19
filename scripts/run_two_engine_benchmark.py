@@ -23,7 +23,7 @@ if sys.platform == "win32":
 
 from semantic_reliability.compiler.compiler import MetricCompiler
 from semantic_reliability.compiler.contracts import SemanticContractValidator
-from semantic_reliability.mutations.engine import MutationEngine
+from semantic_reliability.testing.mutations.engine import MutationEngine
 from semantic_reliability.assertions.registry import AssertionSuite
 from semantic_reliability.adapters.dbt_adapter import DBTTestAdapter
 from semantic_reliability.harness.baseline_ladder import BaselineLadderEvaluator

@@ -1,0 +1,1 @@
+SQL models targeting PostgreSQL-style syntax (`DATE_TRUNC`, `CASE WHEN`, `GROUP BY`); YAML-based contracts and assertions; CSV fixture tables; dbt-style `schema.yml` test declarations.

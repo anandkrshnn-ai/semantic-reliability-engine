@@ -1,0 +1,1 @@
+Pytest-based test suite covering the semantic reliability engine's CLI, firewall, probes, benchmarking, gym dataset generation, MCP server, and compiler subsystems against in-memory DuckDB fixtures.

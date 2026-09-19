@@ -1,0 +1,1 @@
+pytest with Click `CliRunner` for CLI integration tests; in-memory DuckDB connections used as fixture data stores across most tests; pandas DataFrames for constructing CSV fixtures consumed by probes/gym/benchmark flows.

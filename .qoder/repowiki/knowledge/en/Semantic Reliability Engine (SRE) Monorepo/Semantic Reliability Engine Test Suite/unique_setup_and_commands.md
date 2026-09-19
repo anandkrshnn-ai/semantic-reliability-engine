@@ -1,0 +1,1 @@
+Tests are run via the standard pytest entry point from the repository root; they rely on example SQL/metric files under `examples/models/` and `examples/metrics/` being present on disk, and on DuckDB being available as the default dialect for all in-memory fixtures.

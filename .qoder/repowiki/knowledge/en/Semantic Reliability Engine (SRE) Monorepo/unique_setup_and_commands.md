@@ -1,0 +1,1 @@
+`pip install .` installs the `sre` / `semantic-reliability` CLI entry points; `pytest tests/ -v` runs the full 112-test suite; `sre mcp-serve --contracts benchmark_corpus/dev --port 8000` launches the read-only SCOS MCP server used by the demo agent and external agents.

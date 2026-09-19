@@ -1,0 +1,4 @@
+- Metric definitions are expressed as YAML documents with top-level keys `metric`, `description`, `owner`, `grain`, `dialect`, `tags`, `dimensions`, and an inline `sql` block referencing a source table.
+- Assertion suites are declared as YAML documents with a `suite_name`, `description`, and an `assertions` list where each entry specifies a `type` (e.g. `not_null`, `expected_grain`, `required_population`, `metric_value`) plus type-specific parameters.
+- Population and filtering constraints in assertions use quoted SQL filter strings on a `source_table` joined via a `join_key` column.
+- Model SQL mirrors the metric's aggregation logic so baseline and drifted variants can be compared side-by-side.

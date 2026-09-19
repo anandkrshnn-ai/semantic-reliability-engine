@@ -1,0 +1,6 @@
+- Each test file targets a single production subsystem and groups related scenarios under one module (e.g., `test_firewall.py`, `test_probes.py`, `test_mcp_server.py`).
+- Test data is constructed via `@pytest.fixture` functions that create in-memory DuckDB connections and register tables, rather than using external databases.
+- CLI behavior is validated by invoking `semantic_reliability.cli.main` through Click's `CliRunner` and asserting both `exit_code` and expected output substrings.
+- Contracts under test are built programmatically by instantiating `MetricDefinition` with `SemanticInvariants`/`PopulationInvariant`/`GrainInvariant`/`AggregationInvariant` and registering them into a `ContractRegistry`.
+- Temporary directories and files are created via the `tmp_path` pytest fixture and passed to CLI commands via `--output` / `--report` / `--corpus` style arguments.
+- Assertions follow an explicit state-check pattern: assert decision enums (`ALLOW`/`DENY`/`REQUIRE_REVIEW`), boolean flags (`execution_success`, `contract_compliant`, `result_correct`), and presence of structured fields in returned dicts.

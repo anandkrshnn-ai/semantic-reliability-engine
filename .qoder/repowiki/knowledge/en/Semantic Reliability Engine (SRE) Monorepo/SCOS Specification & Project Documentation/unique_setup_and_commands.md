@@ -1,0 +1,1 @@
+Conformance against the standard is validated by parsing YAML/JSON contracts through `scos-v1.schema.json`; the spec declares the public schema URL `https://semantic-reliability.dev/schemas/scos-v1.schema.json` for external tooling to fetch.

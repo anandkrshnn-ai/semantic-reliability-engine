@@ -1,0 +1,1 @@
+Provides a runnable demo agent that exercises the SCOS MCP server against metric contracts, plus Docker and Kubernetes manifests for containerized and sidecar deployments of the semantic firewall.

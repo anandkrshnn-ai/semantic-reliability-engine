@@ -1,0 +1,1 @@
+YAML-based metric and assertion definitions paired with PostgreSQL-flavored SQL (`DATE_TRUNC`, string literals) and a CSV fixture for unit-scale testing.

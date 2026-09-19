@@ -1,0 +1,1 @@
+The holdout track is immutable: `holdout_protocol.yaml` pins it to commit `868379f050ab1a7cd5a2586d0e37e7727cd8b` (tag `v1.0.0-phase7`) and version-locks the validity policy, mutation operator, assertion registry, and fixture adequacy modules, so benchmarks must be run against this exact snapshot.

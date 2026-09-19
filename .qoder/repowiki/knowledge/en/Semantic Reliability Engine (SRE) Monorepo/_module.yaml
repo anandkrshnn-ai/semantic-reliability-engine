@@ -1,0 +1,20 @@
+schema_version: 1
+module_path: ""
+title: Semantic Reliability Engine (SRE) Monorepo
+scope:
+    - README.md
+    - .gitignore
+    - pyproject.toml
+    - requirements.txt
+    - benchmark_scorecard.json
+    - corpus_results.json
+    - dev_results.json
+    - holdout_results.json
+    - hybrid_escalation_scorecard.json
+    - replay_scorecard.json
+    - scorecard_test.json
+    - LICENSE
+    - benchmark_ladder_scorecard.json
+source_files: []
+depends_on: []
+related_to: []

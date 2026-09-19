@@ -1,0 +1,1 @@
+Python monorepo that packages the SemanticGuardrail AST compiler, SCOS contract schema, benchmark corpus, CLI/MCP server, demo agent, and test suite into a single installable semantic-drift detection engine.

@@ -63,6 +63,7 @@ class FixtureAdequacyChecker:
         # Inspect table columns
         cols_info = con.execute(f"DESCRIBE {table_name}").fetchall()
         cols = [c[0].lower() for c in cols_info]
+        data_types = {c[0].lower(): str(c[1]).upper() for c in cols_info}
 
         # 2. Status/Active contrast check
         if "status" in cols:
@@ -101,45 +102,81 @@ class FixtureAdequacyChecker:
                     impact=f"Boundary mutations on `{c}` may produce false equivalent outcomes.",
                 ))
 
-        # 4. Numerical Aggregation Component Contrast
+        # 3b. Boolean Flag Population Contrast (typed detection: mixed TRUE/FALSE supports filter-drop testing)
+        bool_cols = [c for c, t in data_types.items() if "BOOL" in t]
+        if bool_cols:
+            mixed = []
+            for c in bool_cols:
+                vals = {r[0] for r in con.execute(f'SELECT DISTINCT "{c}" FROM {table_name}').fetchall()}
+                if len(vals) > 1:
+                    mixed.append(c)
+            if mixed:
+                checks.append(ContrastCheckResult(
+                    check_name="Boolean Flag Contrast",
+                    status="PASS",
+                    details=f"Columns with both TRUE and FALSE rows: {mixed}",
+                    impact="Dropping boolean population filters will change row counts on this fixture.",
+                ))
+            else:
+                checks.append(ContrastCheckResult(
+                    check_name="Boolean Flag Contrast",
+                    status="WARN",
+                    details=f"Boolean columns {bool_cols} are single-valued.",
+                    impact="Dropping boolean filters may be accidentally equivalent on this fixture.",
+                ))
+
+        # 4. Numerical Aggregation Component Contrast (name list first, typed fallback second)
         num_cols = [c for c in ["amount", "revenue", "price", "cost", "quantity"] if c in cols]
+        if not num_cols:
+            num_cols = [
+                c for c, t in data_types.items()
+                if any(k in t for k in ("DOUBLE", "REAL", "FLOAT", "DECIMAL", "BIGINT", "INTEGER"))
+            ]
         if num_cols:
-            n_col = num_cols[0]
-            val_stats = con.execute(f"SELECT MIN({n_col}), MAX({n_col}), AVG({n_col}) FROM {table_name}").fetchone()
-            if val_stats and val_stats[0] is not None and val_stats[1] is not None and val_stats[0] != val_stats[1]:
+            diverged = None
+            for n_col in num_cols:
+                val_stats = con.execute(f'SELECT MIN("{n_col}"), MAX("{n_col}") FROM {table_name}').fetchone()
+                if val_stats and val_stats[0] is not None and val_stats[1] is not None and val_stats[0] != val_stats[1]:
+                    diverged = (n_col, val_stats)
+                    break
+            if diverged:
+                n_col, val_stats = diverged
                 checks.append(ContrastCheckResult(
                     check_name=f"Numerical Distribution Contrast (`{n_col}`)",
                     status="PASS",
-                    details=f"Range: [{val_stats[0]}, {val_stats[1]}], Mean: {val_stats[2]:.2f}",
+                    details=f"Range: [{val_stats[0]}, {val_stats[1]}] with distinct values.",
                     impact="SUM vs AVG vs COUNT aggregation swaps will produce distinct non-zero variance.",
                 ))
             else:
                 checks.append(ContrastCheckResult(
-                    check_name=f"Numerical Distribution Contrast (`{n_col}`)",
+                    check_name="Numerical Distribution Contrast",
                     status="WARN",
-                    details="Uniform or null values detected in numerical column.",
+                    details="Uniform or null values detected in numerical columns.",
                     impact="Aggregation swaps may yield zero numerical divergence.",
                 ))
 
-        # 5. Multi-dimensional Grain Contrast
+        # 5. Multi-dimensional Grain Contrast (name list first, any-column duplicate fallback)
         grain_cols = [c for c in ["customer_id", "user_id", "order_id", "account_id"] if c in cols]
-        if grain_cols:
-            g_col = grain_cols[0]
-            dupe_groups = con.execute(f"SELECT {g_col}, COUNT(*) FROM {table_name} GROUP BY {g_col} HAVING COUNT(*) > 1").fetchall()
-            if len(dupe_groups) > 0:
-                checks.append(ContrastCheckResult(
-                    check_name="Multi-row Grain Multiplicity",
-                    status="PASS",
-                    details=f"Multiple records exist per `{g_col}` entity.",
-                    impact="Grouping key omissions (Grain Drop) will trigger detectable row count shifts.",
-                ))
-            else:
-                checks.append(ContrastCheckResult(
-                    check_name="Multi-row Grain Multiplicity",
-                    status="WARN",
-                    details=f"Each `{g_col}` appears at most once in fixture.",
-                    impact="Grain reductions may preserve 1:1 row cardinalities on this fixture.",
-                ))
+        dup_col = None
+        for g_col in grain_cols + [c for c in cols if c not in grain_cols]:
+            dupe_groups = con.execute(f'SELECT "{g_col}" FROM {table_name} GROUP BY "{g_col}" HAVING COUNT(*) > 1 LIMIT 1').fetchall()
+            if dupe_groups:
+                dup_col = g_col
+                break
+        if dup_col:
+            checks.append(ContrastCheckResult(
+                check_name="Multi-row Grain Multiplicity",
+                status="PASS",
+                details=f"Multiple records exist per `{dup_col}` entity.",
+                impact="Grouping key omissions (Grain Drop) will trigger detectable row count shifts.",
+            ))
+        else:
+            checks.append(ContrastCheckResult(
+                check_name="Multi-row Grain Multiplicity",
+                status="WARN",
+                details="Every candidate entity column appears at most once per row in the fixture.",
+                impact="Grain reductions may preserve 1:1 row cardinalities on this fixture.",
+            ))
 
         pass_count = sum(1 for c in checks if c.status == "PASS")
         score = (pass_count / len(checks) * 100.0) if checks else 0.0

@@ -1,0 +1,1 @@
+Python 3 with DuckDB (in-memory CSV-backed tables), pandas for DataFrame comparison, rich for console output, PyYAML for contract/assertion manifests, requests for GitHub Releases API v3, and the project's own `semantic_reliability` package (MetricCompiler, MutationEngine, HybridValidator, AssertionSuite, BaselineLadderEvaluator).

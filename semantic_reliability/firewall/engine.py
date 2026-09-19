@@ -1,6 +1,7 @@
 import uuid
 import time
 import json
+import hashlib
 import logging
 import sqlglot
 from pathlib import Path
@@ -122,7 +123,7 @@ class SemanticEvaluator:
             "agent_id": req.agent_id,
             "metric_id": req.metric_id,
             "contract_version": version,
-            "sql_hash": hash(req.sql),
+            "sql_hash": hashlib.sha256(req.sql.encode("utf-8")).hexdigest(),
             "decision": decision.value,
             "violation_count": len(violations),
             "violations": [v.model_dump() for v in violations],

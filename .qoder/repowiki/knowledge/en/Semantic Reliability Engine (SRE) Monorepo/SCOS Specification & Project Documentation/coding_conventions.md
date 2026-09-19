@@ -1,0 +1,4 @@
+- Metric contracts follow a four-layer structure — identity/governance header, canonical `sql`, `invariants` (population/temporal/aggregation/deduction), and `probes` (population/implications/null_drift) — mirrored identically between the prose spec and the JSON Schema.
+- Identifiers use strict patterns enforced by the schema: metric URNs must match `^urn:scos:[a-zA-Z-]+:[a-zA-Z_-]+$`, metric slugs match `^[a-zA-Z0-9_]+$`, and versions follow SemVer `MAJOR.MINOR.PATCH`.
+- Dialect support is enumerated rather than open-ended, restricting `dialect` to `{snowflake, bigquery, postgres, duckdb, redshift, databricks}` with `duckdb` as the default.
+- Documentation files are version-stamped at the top via a `Version:` / `Specification Version:` field so each artifact can be independently tracked alongside code releases.

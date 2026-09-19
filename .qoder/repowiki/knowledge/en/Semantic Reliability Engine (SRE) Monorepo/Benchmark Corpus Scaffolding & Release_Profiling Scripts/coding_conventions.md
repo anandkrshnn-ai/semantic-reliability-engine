@@ -1,0 +1,5 @@
+- Each script is a self-contained CLI entry point guarded by `if __name__ == "__main__":` that parses arguments or env vars and exits with code 1 on usage errors.
+- Benchmark scripts iterate over `benchmark_corpus/{dev,holdout}` subdirectories, discover models by globbing `model_*.sql` and `*.csv`, and load per-model contracts/assertions from sibling YAML files.
+- DuckDB connections are created per model as `duckdb.connect(":memory:")` and populated via `CREATE TABLE ... AS SELECT * FROM read_csv_auto(...)` so each model runs in isolation.
+- Corpus scaffolding scripts define model metadata as Python dicts (id, name, description, table, csv_header, csv_rows, sql, contract, semantic_assertions) and generate a fixed set of five artifacts per model directory.
+- Release scripts hardcode OWNER/REPO/TAG constants at module level and authenticate via Authorization headers constructed from a token passed through env or argv.

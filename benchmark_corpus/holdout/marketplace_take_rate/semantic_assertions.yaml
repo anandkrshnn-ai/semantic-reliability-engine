@@ -4,7 +4,12 @@ assertions:
   columns:
   - seller_id
   - take_rate
+- type: expected_grain
+  columns:
+  - seller_id
 - type: metric_value
   column: take_rate
   min_value: 0.05
   max_value: 0.3
+  expected: 0.2667
+  tolerance_pct: 5.0

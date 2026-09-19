@@ -1,0 +1,1 @@
+JSON Schema Draft 2020-12 (`$schema: https://json-schema.org/draft/2020-12/schema`) for schema validation; Markdown-only deliverables consumed by CI tooling and human reviewers.

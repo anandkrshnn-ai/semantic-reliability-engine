@@ -1,0 +1,6 @@
+- Each metric lives in its own directory under `dev/` or `holdout/` and contains exactly the same five artifacts: `model_*.sql`, `schema.yml`, `contract.yaml`, `semantic_assertions.yaml`, and one or more fixture CSVs.
+- `contract.yaml` consistently declares `metric`, `owner`, `grain`, an `invariants` block (with `population.required_filters`, optional `aggregation`/`units`), an embedded `sql` string, and a human-readable `description`.
+- `schema.yml` uses dbt-style v2 format declaring the model name and per-column `not_null` tests to enforce output shape.
+- `semantic_assertions.yaml` groups checks under a `suite_name` and uses typed assertions (`not_null`, `required_population`, `metric_value`) referencing source tables and expected numeric ranges or tolerances.
+- Population constraints are enforced both declaratively via `contract.yaml.invariants.population.required_filters` and redundantly via `semantic_assertions.yaml` `required_population` entries that restate the same SQL WHERE clauses.
+- Fixture CSVs are named after the source table referenced in assertions (e.g., `transactions.csv`, `checkout_events.csv`, `subscriptions.csv`) so the model SQL can query them directly during benchmark execution.

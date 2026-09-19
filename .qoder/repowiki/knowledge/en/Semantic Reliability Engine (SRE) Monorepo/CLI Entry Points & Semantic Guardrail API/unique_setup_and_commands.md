@@ -1,0 +1,1 @@
+The CLI is invoked as `semantic-reliability <command>` (Click group `main`). Windows UTF-8 console encoding is forced at import time via `sys.stdout.reconfigure`. Commands such as `benchmark-live` accept optional LLM provider flags (`--provider openai|anthropic|ollama --model <id> --api-key ...`) and fall back to a mock synthetic mode when no provider is configured.
