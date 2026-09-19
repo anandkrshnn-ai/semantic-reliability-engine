@@ -89,6 +89,23 @@ def run_benchmark():
                 print(f"  [ERROR] Baseline query failed for {model_id}: {e}")
                 continue
 
+            # Evaluate assertions on baseline
+            baseline_config_error = False
+            baseline_config_error_details = []
+            if sem_suite:
+                for assertion in sem_suite.assertions:
+                    try:
+                        res = assertion.evaluate(con, sql_text)
+                        if not res.passed:
+                            baseline_config_error = True
+                            baseline_config_error_details.append(f"Failed: {assertion.__class__.__name__}")
+                    except Exception as e:
+                        baseline_config_error = True
+                        baseline_config_error_details.append(f"Crashed: {assertion.__class__.__name__}")
+            
+            if baseline_config_error:
+                print(f"  [WARN] {model_id} excluded due to ASSERTION_CONFIGURATION_ERROR on baseline: {baseline_config_error_details}")
+
             # Generate mutations
             mutator = MutationEngine(sql_text)
             mutations = mutator.generate_all_mutations()
@@ -99,6 +116,7 @@ def run_benchmark():
                 "track": track_name,
                 "model_id": model_id,
                 "total_mutations": len(mutations),
+                "config_errors": 0,
                 "valid_defects": 0,
                 "tier_0_caught": 0,
                 "tier_1_caught": 0,
@@ -166,26 +184,44 @@ def run_benchmark():
                 # 5. Tier 4: Runtime Relational Oracle
                 t4_start = time.perf_counter()
                 t4_caught = False
-                if is_executable:
+                t4_config_error = False
+
+                if baseline_config_error:
+                    t4_config_error = True
+                elif is_executable:
                     for assertion in sem_suite.assertions:
                         try:
                             res = assertion.evaluate(con, mut_sql)
                             if not res.passed:
-                                t4_caught = True
-                                break
+                                if res.failure_reason and "Runtime evaluation error" in res.failure_reason:
+                                    t4_config_error = True
+                                    break
+                                else:
+                                    t4_caught = True
+                                    break
                         except Exception:
-                            t4_caught = True
+                            t4_config_error = True
                             break
                 else:
                     t4_caught = True
+
                 t4_dur = (time.perf_counter() - t4_start) * 1000.0
                 tier_stats["tier_4"]["latencies_ms"].append(t4_dur)
-                if t4_caught:
+                
+                if t4_config_error:
+                    model_record["config_errors"] += 1
+                    model_record["valid_defects"] -= 1 # Undo the increment from earlier
+                    if t0_caught: model_record["tier_0_caught"] -= 1
+                    if t1_caught: model_record["tier_1_caught"] -= 1
+                    if t2_caught: model_record["tier_2_caught"] -= 1
+                    if t3_caught: model_record["tier_3_caught"] -= 1
+                elif t4_caught:
                     model_record["tier_4_caught"] += 1
 
             all_results.append(model_record)
             v = model_record["valid_defects"]
-            print(f"  {model_id:<28} | Valid: {v:2d} | T0: {model_record['tier_0_caught']:2d} | T1: {model_record['tier_1_caught']:2d} | T2: {model_record['tier_2_caught']:2d} | T3: {model_record['tier_3_caught']:2d} | T4: {model_record['tier_4_caught']:2d}")
+            ce = model_record["config_errors"]
+            print(f"  {model_id:<28} | Valid: {v:2d} | ConfigErr: {ce:2d} | T0: {model_record['tier_0_caught']:2d} | T1: {model_record['tier_1_caught']:2d} | T2: {model_record['tier_2_caught']:2d} | T3: {model_record['tier_3_caught']:2d} | T4: {model_record['tier_4_caught']:2d}")
 
     # Aggregate stats
     df_res = pd.DataFrame(all_results)

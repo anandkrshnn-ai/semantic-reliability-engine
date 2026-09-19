@@ -14,6 +14,7 @@ from semantic_reliability.harness.equivalence import EquivalenceOracle
 
 class MutationClassification(str, Enum):
     EQUIVALENT_ON_FIXTURE = "EQUIVALENT_ON_FIXTURE"
+    ASSERTION_CONFIGURATION_ERROR = "ASSERTION_CONFIGURATION_ERROR"
     RUNTIME_ERROR = "RUNTIME_ERROR"
     VALID_DEFECT_DETECTED = "VALID_DEFECT_DETECTED"
     VALID_DEFECT_SURVIVED = "VALID_DEFECT_SURVIVED"
@@ -42,6 +43,7 @@ class AssertionBenchmarkReport(BaseModel):
     total_mutations_generated: int
     executable_mutations_count: int
     equivalent_mutations_count: int
+    configuration_error_count: int = 0
     valid_defects_count: int
     detected_by_assertions_count: int
     surviving_defects_count: int
@@ -122,6 +124,7 @@ class DuckDBFixtureRunner:
         mutation_type: str,
         description: str,
         assertion_suite: Optional[AssertionSuite] = None,
+        baseline_failed_assertions: Optional[List[str]] = None,
     ) -> AssertionAwareExecutionDiff:
         base_df, base_err = self.execute_query(baseline_sql)
         mut_df, mut_err = self.execute_query(mutated_sql)
@@ -155,12 +158,23 @@ class DuckDBFixtureRunner:
 
         # 3. Evaluate configured assertions on the mutated query
         failed_assertions = []
+        crashed_assertions = []
+        baseline_failed = baseline_failed_assertions or []
+
         if assertion_suite:
             assertion_results = self.evaluate_assertions(mutated_sql, assertion_suite)
-            failed_assertions = [r.name for r in assertion_results if not r.passed]
+            for r in assertion_results:
+                if not r.passed:
+                    if r.failure_reason and "Runtime evaluation error" in r.failure_reason:
+                        crashed_assertions.append(r.name)
+                    else:
+                        failed_assertions.append(r.name)
 
         # 4. Classify outcome
-        if is_equiv:
+        if len(crashed_assertions) > 0 or len(baseline_failed) > 0:
+            classification = MutationClassification.ASSERTION_CONFIGURATION_ERROR
+            summary = f"Assertion Configuration Error. Crashed: {crashed_assertions}. Baseline failed: {baseline_failed}"
+        elif is_equiv:
             classification = MutationClassification.EQUIVALENT_ON_FIXTURE
             summary = "Equivalent output on fixture (global semantic equivalence not established)"
         elif len(failed_assertions) > 0:
@@ -196,7 +210,14 @@ class DuckDBFixtureRunner:
         equiv_count = 0
         detected_count = 0
         surviving_count = 0
+        config_error_count = 0
         surviving_summaries: List[str] = []
+
+        baseline_failed_assertions = []
+        baseline_results = self.evaluate_assertions(baseline_sql, suite)
+        for r in baseline_results:
+            if not r.passed:
+                baseline_failed_assertions.append(r.name)
 
         for idx, mut in enumerate(mutations, 1):
             diff = self.compare_execution_with_assertions(
@@ -206,11 +227,14 @@ class DuckDBFixtureRunner:
                 mutation_type=mut.mutation_type.value,
                 description=mut.description,
                 assertion_suite=suite,
+                baseline_failed_assertions=baseline_failed_assertions,
             )
             evaluations.append(diff)
 
             if diff.classification == MutationClassification.EQUIVALENT_ON_FIXTURE:
                 equiv_count += 1
+            elif diff.classification == MutationClassification.ASSERTION_CONFIGURATION_ERROR:
+                config_error_count += 1
             elif diff.classification in (MutationClassification.VALID_DEFECT_DETECTED, MutationClassification.RUNTIME_ERROR):
                 detected_count += 1
             elif diff.classification == MutationClassification.VALID_DEFECT_SURVIVED:
@@ -218,7 +242,7 @@ class DuckDBFixtureRunner:
                 surviving_summaries.append(f"[{diff.mutation_type}] {diff.description} -> {diff.summary}")
 
         total_gen = len(mutations)
-        executable_valid = total_gen - equiv_count
+        executable_valid = total_gen - equiv_count - config_error_count
         effective_catch_score = (detected_count / executable_valid * 100.0) if executable_valid > 0 else 100.0
 
         return AssertionBenchmarkReport(
@@ -226,6 +250,7 @@ class DuckDBFixtureRunner:
             total_mutations_generated=total_gen,
             executable_mutations_count=total_gen,
             equivalent_mutations_count=equiv_count,
+            configuration_error_count=config_error_count,
             valid_defects_count=executable_valid,
             detected_by_assertions_count=detected_count,
             surviving_defects_count=surviving_count,
