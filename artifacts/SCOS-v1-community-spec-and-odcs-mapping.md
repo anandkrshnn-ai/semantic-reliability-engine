@@ -259,13 +259,13 @@ A processor that understands only ODCS MUST still treat the table contract as va
 
 These are known on `main` and are part of this draft’s honesty requirements:
 
-1. Freeze a single `scos_version` string in spec, JSON Schema, and every corpus contract.
-2. Reconcile `spec/scos-v1.schema.json` with the live corpus (currently still divergent).
+~~1. Freeze a single `scos_version` string in spec, JSON Schema, and every corpus contract.~~ *(Resolved in `3323f0c`)*
+~~2. Reconcile `spec/scos-v1.schema.json` with the live corpus (currently still divergent).~~ *(Resolved in `3323f0c`)*
 3. Host the schema at a stable URL; do not cite `semantic-reliability.dev` until that host serves the file.
 4. Point default clone / docs at `main` (`53cd696` and later). `master` is a stale snapshot (65 commits; 112-test README).
 5. Keep live-agent adapters labeled experimental until a named-model run with frozen seeds is published.
 
-Until (1) and (2) are true, this document is an internal community draft only.
+*Note: With items 1 and 2 resolved, the schema and corpus are now fully reconciled. However, external submission to NIST or Bitol should still hold until item 3 is resolved.*
 
 ---
 
