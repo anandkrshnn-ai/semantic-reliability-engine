@@ -226,7 +226,7 @@ class MutationEngine:
         coalesce = ast_copy.find(exp.Coalesce)
         if coalesce and len(coalesce.expressions) > 0:
             # Replace COALESCE(col, 0) with just col (the first expression)
-            coalesce.replace(coalesce.this)
+            coalesce.replace(coalesce.expressions[0])
             return MutationResult(
                 mutation_type=MutationType.COALESCE_BYPASS,
                 description="Bypassed COALESCE default value, exposing query to NULL propagation.",

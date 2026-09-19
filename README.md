@@ -84,14 +84,14 @@ invariants:
 
 ## Empirical Benchmark Results (Phase 3 Verified)
 
-44 valid injected defects, independently reproduced across 14 analytical metric definitions in the benchmark corpus (8 development-track, 6 frozen-holdout-track). These are mutation-tested SQL metric definitions, not live LLM evaluations — no language model is in the loop for this benchmark.
+45 valid injected defects, independently reproduced across 14 analytical metric definitions in the benchmark corpus (8 development-track, 6 frozen-holdout-track). These are mutation-tested SQL metric definitions, not live LLM evaluations — no language model is in the loop for this benchmark.
 
 | Evaluation Tier | Mechanism | Catch Rate | Key Finding |
 |---|---|---|---|
-| Tier 1 | Minimal structural checks (not_null, unique, row-count bounds) | 9.1% (4/44) | — |
-| Tier 2 | Realistic dbt suite (sourced from dbt-labs/jaffle_shop) | 9.1% (4/44) | Adds zero incremental detection outside its source e-commerce domain — a single-domain data-quality suite doesn't generalize to heterogeneous analytical models |
-| Tier 3 | Static SCOS AST Linter | 63.6% (28/44) | Catches structural grain shifts and dropped filters, zero query execution, sub-millisecond |
-| Tier 4 | Runtime Relational Oracle | 81.8% (36/44) | Full semantic verification via contrastive fixture execution |
+| Tier 1 | Minimal structural checks (not_null, unique, row-count bounds) | 8.9% (4/45) | — |
+| Tier 2 | Realistic dbt suite (sourced from dbt-labs/jaffle_shop) | 8.9% (4/45) | Adds zero incremental detection outside its source e-commerce domain — a single-domain data-quality suite doesn't generalize to heterogeneous analytical models |
+| Tier 3 | Static SCOS AST Linter | 62.2% (28/45) | Catches structural grain shifts and dropped filters, zero query execution, sub-millisecond |
+| Tier 4 | Runtime Relational Oracle | 82.2% (37/45) | Full semantic verification via contrastive fixture execution |
 
 Full per-model breakdown and root-cause taxonomy: [docs/SURVIVING_DEFECT_ANALYSIS.md](docs/SURVIVING_DEFECT_ANALYSIS.md).
 

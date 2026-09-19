@@ -41,7 +41,7 @@ This document provides a root-cause error analysis of valid mutations that survi
 - **Injected Fault:** Dropped exclusion filter `AND settlement_status = 'settled'`.
 - **Why Standard Tests Passed:** Output remained a valid numerical ratio.
 - **Why Semantic Tests Missed:** Survived as equivalent because every row in the small 5-row fixture had `settled` as the status, so dropping the filter did nothing.
-- **⚠️ Original remediation correction:** The originally claimed defect (`COALESCE_BYPASS`) and remediation (`fixture_contrast`) were complete hallucinations. The SQL model *never had* a `COALESCE` function. The real defect is the `FILTER_DROP`. 
+- **⚠️ Original remediation correction:** The earlier report claiming the `COALESCE_BYPASS` mutation was a hallucination because the SQL "never had a COALESCE function" was itself factually incorrect. `COALESCE(is_disputed, false)` has been present since the original frozen baseline (`8155727`), making `COALESCE_BYPASS` a real, correctly-classified defect that hardcoded `FALSE = TRUE`. However, the other primary defect requiring fixture remediation was the `FILTER_DROP`. 
 - **Remediation:** Added a `pending` row to the fixture so dropping the filter actually changes the result, and added a fixture-grounded point oracle (`expected: 1.5`, 5% tolerance) plus `expected_grain`. Semantic catch: 66.7% → 100%.
 
 ---
