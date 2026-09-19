@@ -22,15 +22,21 @@ class LiveLLMClient:
     ):
         self.provider = provider.lower()
         self.model = model
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
-        self.api_base = api_base or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        self.api_key = api_key or os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("XAI_API_KEY")
+        if not api_base:
+            if self.provider == "grok":
+                self.api_base = os.environ.get("XAI_BASE_URL", "https://api.x.ai/v1")
+            else:
+                self.api_base = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        else:
+            self.api_base = api_base
         self.temperature = temperature
 
     def __call__(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """Invokes the selected LLM provider and returns structured response."""
         import requests
 
-        if self.provider in ("openai", "ollama", "vllm", "litellm"):
+        if self.provider in ("openai", "ollama", "vllm", "litellm", "grok"):
             headers = {
                 "Authorization": f"Bearer {self.api_key or 'sk-no-key-required'}",
                 "Content-Type": "application/json",

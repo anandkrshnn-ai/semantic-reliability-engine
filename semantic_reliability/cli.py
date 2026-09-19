@@ -853,7 +853,7 @@ def benchmark_replay(trajectories, contracts, artifacts_dir, output):
 @click.option("--output", default="benchmark_scorecard.json", help="Path for output scorecard JSON")
 @click.option("--trajectories-out", default="runs/trajectories.jsonl", help="Path for exported JSONL trajectories")
 @click.option("--artifacts-dir", default="artifacts/benchmark", help="Local directory to store raw SQL artifacts")
-@click.option("--provider", default="mock", help="LLM Provider: mock, openai, anthropic, ollama, vllm")
+@click.option("--provider", default="mock", help="LLM Provider: mock, openai, anthropic, ollama, vllm, grok")
 @click.option("--model", default="gpt-4o", help="Model identifier (e.g. gpt-4o, claude-3-5-sonnet, llama3)")
 @click.option("--api-key", default=None, help="API key for LLM provider (or via env var)")
 @click.option("--api-base", default=None, help="Base URL for LLM endpoint")
@@ -879,7 +879,7 @@ def benchmark_live(contracts, output, trajectories_out, artifacts_dir, provider,
             "[bold yellow]⚠️ RUNNING IN SYNTHETIC SCAFFOLDING / SIMULATION MODE[/bold yellow]\n"
             "[dim]No external LLM provider was configured. The run evaluates the benchmark evaluation harness, "
             "oracle logic, and trajectory replay loop rather than a live model checkpoint.[/dim]\n"
-            "To evaluate a live model, specify [cyan]--provider openai|anthropic|ollama --model <model_id>[/cyan].",
+            "To evaluate a live model, specify [cyan]--provider openai|anthropic|ollama|grok --model <model_id>[/cyan].",
             title="[bold yellow]🧪 SCOS Benchmark Harness[/bold yellow]",
             border_style="yellow",
         ))
