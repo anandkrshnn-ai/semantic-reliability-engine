@@ -22,7 +22,16 @@ class LiveLLMClient:
     ):
         self.provider = provider.lower()
         self.model = model
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("XAI_API_KEY")
+        if not api_key:
+            if self.provider == "grok":
+                self.api_key = os.environ.get("XAI_API_KEY")
+            elif self.provider == "anthropic":
+                self.api_key = os.environ.get("ANTHROPIC_API_KEY")
+            else:
+                self.api_key = os.environ.get("OPENAI_API_KEY")
+        else:
+            self.api_key = api_key
+
         if not api_base:
             if self.provider == "grok":
                 self.api_base = os.environ.get("XAI_BASE_URL", "https://api.x.ai/v1")
@@ -50,10 +59,20 @@ class LiveLLMClient:
             if tools:
                 payload["tools"] = tools
 
-            resp = requests.post(url, headers=headers, json=payload, timeout=60)
-            resp.raise_for_status()
-            data = resp.json()
-            choice = data["choices"][0]["message"]
+            try:
+                resp = requests.post(url, headers=headers, json=payload, timeout=60)
+                resp.raise_for_status()
+                data = resp.json()
+                choice = data["choices"][0]["message"]
+            except requests.exceptions.RequestException as e:
+                logger.error(f"API Error ({self.provider}): {e}")
+                if 'resp' in locals() and hasattr(resp, 'text'):
+                    logger.error(f"Response body: {resp.text}")
+                return {
+                    "role": "assistant",
+                    "content": f"Error: API Request Failed - {str(e)}",
+                    "tool_calls": []
+                }
             return {
                 "role": "assistant",
                 "content": choice.get("content"),
@@ -77,10 +96,20 @@ class LiveLLMClient:
                 "max_tokens": 2048,
                 "temperature": self.temperature,
             }
-            resp = requests.post(url, headers=headers, json=payload, timeout=60)
-            resp.raise_for_status()
-            data = resp.json()
-            content_text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
+            try:
+                resp = requests.post(url, headers=headers, json=payload, timeout=60)
+                resp.raise_for_status()
+                data = resp.json()
+                content_text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
+            except requests.exceptions.RequestException as e:
+                logger.error(f"API Error ({self.provider}): {e}")
+                if 'resp' in locals() and hasattr(resp, 'text'):
+                    logger.error(f"Response body: {resp.text}")
+                return {
+                    "role": "assistant",
+                    "content": f"Error: API Request Failed - {str(e)}",
+                    "tool_calls": []
+                }
             return {
                 "role": "assistant",
                 "content": content_text,
