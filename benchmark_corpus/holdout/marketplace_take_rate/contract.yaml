@@ -1,3 +1,4 @@
+scos_version: 1.0.0
 metric: marketplace_take_rate
 owner: marketplace_ops
 grain: seller

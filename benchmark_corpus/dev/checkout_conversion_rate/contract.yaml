@@ -1,3 +1,4 @@
+scos_version: 1.0.0
 metric: checkout_conversion_rate
 owner: marketing
 grain: aggregate

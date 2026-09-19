@@ -1,3 +1,4 @@
+scos_version: 1.0.0
 metric: hospital_readmission_rate
 owner: clinical_quality
 grain: department

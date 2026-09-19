@@ -1,3 +1,4 @@
+scos_version: 1.0.0
 metric: cloud_compute_burn_rate
 owner: finops
 grain: team

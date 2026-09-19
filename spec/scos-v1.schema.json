@@ -4,11 +4,19 @@
   "title": "Semantic Contract Open Standard (SCOS) v1.0.0",
   "description": "Standard declarative schema for executable business metric contracts, semantic invariants, and runtime observability probes.",
   "type": "object",
-  "required": ["scos_version", "metric", "owner", "grain", "sql"],
+  "required": [
+    "scos_version",
+    "metric",
+    "owner",
+    "grain",
+    "sql"
+  ],
   "properties": {
     "scos_version": {
       "type": "string",
-      "enum": ["1.0.0"],
+      "enum": [
+        "1.0.0"
+      ],
       "description": "The specification version of the SCOS standard."
     },
     "id": {
@@ -45,7 +53,14 @@
     },
     "dialect": {
       "type": "string",
-      "enum": ["snowflake", "bigquery", "postgres", "duckdb", "redshift", "databricks"],
+      "enum": [
+        "snowflake",
+        "bigquery",
+        "postgres",
+        "duckdb",
+        "redshift",
+        "databricks"
+      ],
       "default": "duckdb",
       "description": "SQL dialect used for compilation and AST parsing."
     },
@@ -55,7 +70,9 @@
     },
     "tags": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Categorical tags for filtering and governance."
     },
     "invariants": {
@@ -67,27 +84,17 @@
           "properties": {
             "required_filters": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "description": "SQL predicate expressions that MUST be present in the WHERE clause."
             },
             "forbidden_filters": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "description": "SQL predicate expressions that MUST NOT be present in the WHERE clause."
-            }
-          }
-        },
-        "temporal": {
-          "type": "object",
-          "properties": {
-            "timezone": {
-              "type": "string",
-              "default": "UTC",
-              "description": "Expected timezone for temporal aggregations and partition boundaries."
-            },
-            "period_grain": {
-              "type": "string",
-              "description": "Required time window partition (e.g. month, day, quarter)."
             }
           }
         },
@@ -96,8 +103,24 @@
           "properties": {
             "required_aggregations": {
               "type": "array",
-              "items": { "type": "string" },
-              "description": "Aggregation functions that must enclose specified measure expressions."
+              "items": {
+                "type": "string"
+              }
+            },
+            "required_function": {
+              "type": "string"
+            },
+            "positive_components": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "negative_components": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           }
         },
@@ -106,8 +129,44 @@
           "properties": {
             "required_subtractions": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "description": "Components that must be subtracted from the gross sum (e.g. discounts, refunds)."
+            }
+          }
+        },
+        "time": {
+          "type": "object",
+          "properties": {
+            "timezone": {
+              "type": "string",
+              "default": "UTC"
+            },
+            "period_grain": {
+              "type": "string"
+            }
+          }
+        },
+        "grain": {
+          "type": "object",
+          "properties": {
+            "required_dimensions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "units": {
+          "type": "object",
+          "properties": {
+            "currency": {
+              "type": "string"
+            },
+            "scale": {
+              "type": "string"
             }
           }
         }
@@ -121,11 +180,25 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["predicate", "min_rate", "max_rate"],
+            "required": [
+              "predicate",
+              "min_rate",
+              "max_rate"
+            ],
             "properties": {
-              "predicate": { "type": "string" },
-              "min_rate": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
-              "max_rate": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+              "predicate": {
+                "type": "string"
+              },
+              "min_rate": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0
+              },
+              "max_rate": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0
+              }
             }
           }
         },
@@ -133,11 +206,23 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["antecedent", "consequent", "min_confidence"],
+            "required": [
+              "antecedent",
+              "consequent",
+              "min_confidence"
+            ],
             "properties": {
-              "antecedent": { "type": "string" },
-              "consequent": { "type": "string" },
-              "min_confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+              "antecedent": {
+                "type": "string"
+              },
+              "consequent": {
+                "type": "string"
+              },
+              "min_confidence": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0
+              }
             }
           }
         },
@@ -145,10 +230,19 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["column", "max_null_rate"],
+            "required": [
+              "column",
+              "max_null_rate"
+            ],
             "properties": {
-              "column": { "type": "string" },
-              "max_null_rate": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+              "column": {
+                "type": "string"
+              },
+              "max_null_rate": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0
+              }
             }
           }
         }

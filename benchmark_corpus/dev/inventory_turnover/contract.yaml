@@ -1,3 +1,4 @@
+scos_version: 1.0.0
 metric: inventory_turnover
 owner: supply_chain
 grain: warehouse

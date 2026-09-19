@@ -1,3 +1,4 @@
+scos_version: 1.0.0
 metric: customer_churn_rate
 owner: growth
 grain: plan

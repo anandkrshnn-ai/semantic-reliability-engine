@@ -1,38 +1,34 @@
+scos_version: 1.0.0
 metric: net_revenue
 description: Recognized revenue minus refunds for active enterprise customers
 owner: finance
 grain: customer_month
 dialect: postgres
 tags:
-  - financial_contract
-  - tier_1
+- financial_contract
+- tier_1
 invariants:
   population:
     required_filters:
-      - "status = 'active'"
-      - "region = 'NA'"
+    - status = 'active'
+    - region = 'NA'
   grain:
     required_dimensions:
-      - customer_id
-      - "date_trunc('month', transaction_date)"
+    - customer_id
+    - date_trunc('month', transaction_date)
   aggregation:
     required_function: SUM
     positive_components:
-      - "type = 'invoice'"
+    - type = 'invoice'
     negative_components:
-      - "type = 'refund'"
+    - type = 'refund'
   units:
     currency: USD
     scale: standard
   time:
     timezone: UTC
     period_grain: calendar_month
-sql: |
-  SELECT
-    customer_id,
-    DATE_TRUNC('month', transaction_date) AS reporting_month,
-    SUM(CASE WHEN type = 'invoice' THEN amount ELSE 0 END) -
-    SUM(CASE WHEN type = 'refund' THEN amount ELSE 0 END) AS net_revenue
-  FROM transactions
-  WHERE region = 'NA' AND status = 'active'
-  GROUP BY customer_id, DATE_TRUNC('month', transaction_date)
+sql: "SELECT\n  customer_id,\n  DATE_TRUNC('month', transaction_date) AS reporting_month,\n\
+  \  SUM(CASE WHEN type = 'invoice' THEN amount ELSE 0 END) -\n  SUM(CASE WHEN type\
+  \ = 'refund' THEN amount ELSE 0 END) AS net_revenue\nFROM transactions\nWHERE region\
+  \ = 'NA' AND status = 'active'\nGROUP BY customer_id, DATE_TRUNC('month', transaction_date)\n"

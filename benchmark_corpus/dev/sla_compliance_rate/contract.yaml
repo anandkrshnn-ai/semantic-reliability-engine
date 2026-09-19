@@ -1,3 +1,4 @@
+scos_version: 1.0.0
 metric: sla_compliance_rate
 owner: customer_support
 grain: priority
