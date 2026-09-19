@@ -1,55 +1,55 @@
 {
-  "timestamp": "2026-09-19T14:24:47Z",
+  "timestamp": "2026-09-19T14:57:11Z",
   "total_models": 14,
-  "total_valid_defects": 45,
+  "total_valid_defects": 44,
   "summary": [
     {
       "tier": "Tier 0: Syntax Only",
       "caught": 0,
-      "total": 45,
+      "total": 44,
       "catch_rate_pct": 0.0,
-      "p50_latency_ms": 0.46,
-      "p95_latency_ms": 0.78,
+      "p50_latency_ms": 0.49,
+      "p95_latency_ms": 0.79,
       "compute_type": "sqlglot AST parse",
       "est_cost": "$0.00"
     },
     {
       "tier": "Tier 1: Minimal Structural",
       "caught": 4,
-      "total": 45,
-      "catch_rate_pct": 8.89,
-      "p50_latency_ms": 0.26,
-      "p95_latency_ms": 0.47,
+      "total": 44,
+      "catch_rate_pct": 9.09,
+      "p50_latency_ms": 0.29,
+      "p95_latency_ms": 0.46,
       "compute_type": "null / unique / bounds",
       "est_cost": "$0.00"
     },
     {
       "tier": "Tier 2: Realistic dbt Suite",
       "caught": 4,
-      "total": 45,
-      "catch_rate_pct": 8.89,
-      "p50_latency_ms": 1.46,
-      "p95_latency_ms": 2.17,
+      "total": 44,
+      "catch_rate_pct": 9.09,
+      "p50_latency_ms": 1.58,
+      "p95_latency_ms": 2.32,
       "compute_type": "accepted_range / values / fk / singular",
       "est_cost": "$0.00"
     },
     {
       "tier": "Tier 3: Static SCOS AST Linter",
       "caught": 28,
-      "total": 45,
-      "catch_rate_pct": 62.22,
-      "p50_latency_ms": 0.9,
-      "p95_latency_ms": 1.39,
+      "total": 44,
+      "catch_rate_pct": 63.64,
+      "p50_latency_ms": 0.83,
+      "p95_latency_ms": 1.44,
       "compute_type": "Deterministic AST Compiler",
       "est_cost": "$0.00"
     },
     {
       "tier": "Tier 4: Runtime Relational Oracle",
-      "caught": 37,
-      "total": 45,
-      "catch_rate_pct": 82.22,
-      "p50_latency_ms": 3.21,
-      "p95_latency_ms": 6.65,
+      "caught": 36,
+      "total": 44,
+      "catch_rate_pct": 81.82,
+      "p50_latency_ms": 3.4,
+      "p95_latency_ms": 5.6,
       "compute_type": "DuckDB Join / Predicate Fixture",
       "est_cost": "~$0.01 / scan"
     }
@@ -192,12 +192,12 @@
       "model_id": "fintech_chargeback_rate",
       "total_mutations": 4,
       "config_errors": 0,
-      "valid_defects": 4,
+      "valid_defects": 3,
       "tier_0_caught": 0,
       "tier_1_caught": 0,
       "tier_2_caught": 0,
       "tier_3_caught": 2,
-      "tier_4_caught": 4
+      "tier_4_caught": 3
     },
     {
       "track": "Frozen Holdout Track",
