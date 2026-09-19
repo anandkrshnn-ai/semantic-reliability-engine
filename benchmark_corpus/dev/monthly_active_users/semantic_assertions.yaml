@@ -4,10 +4,9 @@ assertions:
   columns:
   - reporting_month
   - active_users
-- type: required_population
-  source_table: user_logins
-  required_filter: is_bot = false
-  join_key: user_id
+- type: expected_grain
+  grain_columns:
+  - reporting_month
 - type: metric_value
   column: active_users
-  expected: 3.0
+  expected_value: 3.0

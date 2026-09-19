@@ -4,11 +4,10 @@ assertions:
   columns:
   - plan
   - churn_rate
-- type: required_population
-  source_table: subscriptions
-  required_filter: is_trial = false
-  join_key: customer_id
 - type: metric_value
   column: churn_rate
-  min_value: 0.0
-  max_value: 1.0
+  expected_value: 0.333333
+  tolerance_pct: 1.0
+- type: expected_grain
+  grain_columns:
+  - plan

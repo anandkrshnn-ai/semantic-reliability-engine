@@ -6,5 +6,7 @@ assertions:
   - sla_rate
 - type: metric_value
   column: sla_rate
-  min_value: 0.0
-  max_value: 1.0
+  expected_value: 2.0
+- type: expected_grain
+  grain_columns:
+  - priority
