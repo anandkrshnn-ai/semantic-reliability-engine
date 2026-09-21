@@ -27,12 +27,12 @@
   commentstyle=\color{green!60!black},
   stringstyle=\color{red!70!black},
   showstringspaces=false
-\title{\textbf{Semantic-SQL-Bench: Adversarial Evaluation and Contract-Grounded Oracles for Business-Semantic Correctness in Text-to-SQL AI Agents}}
+\title{\textbf{Query-Level Semantic Contracts for Agent-Generated SQL: A Mutation Benchmark and an ODCS-Compatible Schema}}
 
 \author{
   \textbf{Anandakrishnan Damodaran} \\
-  \texttt{anand@semantic-reliability.org} \\
-  \small Semantic Reliability Working Group
+  \texttt{anandkrshnn@outlook.com} \\
+  \small Independent
 }
 
 \date{\today}
@@ -42,9 +42,13 @@
 \maketitle
 
 \begin{abstract}
-While modern Large Language Model (LLM) agents generate syntactically valid and executable SQL queries with high reliability on standard benchmarks (e.g., Spider, BIRD), enterprise deployments frequently suffer from \textit{silent semantic failures}: queries that execute cleanly on warehouse engines but fundamentally violate organizational business definitions (e.g., dropping required active-cohort filters, omitting negative return components, or collapsing aggregation grain). Traditional execution accuracy benchmarks evaluate result-set equivalence on static toy databases, failing to evaluate adherence to explicit business invariants across changing data distributions.
+Large language model agents now generate SQL directly against warehouse schemas. A query can be syntactically valid, execute without error, and still implement the wrong business metric: it may drop a required population filter, change aggregation grain, or break a declared numerator--denominator coupling. Neither table-level data contracts nor natural-language tool-call policies test for these query-level invariants.
 
-In this work, we present \textbf{Semantic-SQL-Bench}, an open benchmark and evaluation framework designed specifically to stress-test the business-semantic correctness of Text-to-SQL agents. The framework comprises three core components: (1) a multi-domain corpus of 14 enterprise metric contracts across development and frozen holdout tracks; (2) an abstract syntax tree (AST) chaos mutation suite defining 5 domain-level semantic defect operators; and (3) contract-grounded evaluation oracles that evaluate both static AST invariant adherence and empirical fixture-backed correctness. Furthermore, we characterize the systems tradeoff between zero-execution static pre-flight AST linting (sub-millisecond pre-generation guidance) versus fixture-backed relational execution verification. Across our frozen holdout mutation corpus, contract-grounded verification catches 61.1\% of valid executable semantic mutations (11/18), compared to 0.0\% (0/18) detected by standard minimal structural schema tests, establishing a rigorous methodology for evaluating semantic reliability in AI-driven data analytics.
+This note specifies SCOS (Semantic Contract Open Standard), an individual community schema for metric contracts, together with a mutation-testing protocol that scores candidate SQL without a language model in the loop. Contracts declare grain, required population filters, deductions, and units; checking is performed via deterministic AST inspection and, optionally, fixture-backed execution against a relational oracle. SCOS is written as an extension profile of the Open Data Contract Standard (\texttt{customProperties} / \texttt{authoritativeDefinitions}), not as a competing contract format.
+
+On a frozen benchmark pack of 45 authored semantic defects across 14 metric definitions (\texttt{benchmark\_ladder\_scorecard.json}, timestamp 2026-09-19T14:24:47Z, tag \texttt{v1.0.0}), catch rates were: minimal structural schema tests, 8.9\% (4/45); a single-domain realistic data-quality suite, 8.9\% (4/45), demonstrating no incremental detection outside its source domain; a static AST invariant linter, 62.2\% (28/45); and a fixture-backed runtime relational oracle, 82.2\% (37/45). The schema is hosted at a content-addressed, tag-pinned URL.
+
+SCOS is not a standards-body submission and does not attest agent identity; it is a separate, composable layer addressing whether a query's output is semantically faithful to an authorized metric definition, distinct from identity or authorization concerns. Limitations: the defect pack is authored via systematic AST mutation, not sampled from production query traces; evaluation of live, multi-turn LLM agents against this benchmark is not yet included in these results; and the runtime oracle's fixtures are small (4--7 rows per model), so latency figures should not be read as production-scale estimates.
 \end{abstract}
 
 \section{Introduction and Problem Definition}
@@ -210,11 +214,11 @@ We evaluated the complete 14-metric contract corpus ($|\mathcal{I}_{\text{dev}}|
 \textbf{Tier 1: Minimal Structural} & Column Nullity / Row Bounds & 4 / 45 & \textbf{8.9\%} & 0.24 ms & 0.40 ms & \$0.00 (0 bytes) \\
 \textbf{Tier 2: Canonical dbt Suite} & \texttt{jaffle\_shop} Data Quality Tests & 4 / 45 & \textbf{8.9\%} & 1.30 ms & 1.86 ms & \$0.00 (0 bytes) \\
 \textbf{Tier 3: Static SCOS AST Linter} & Deterministic Invariant Compiler & 28 / 45 & \textbf{62.2\%} & \textbf{0.74 ms} & \textbf{1.24 ms} & \textbf{\$0.00 (0 bytes)} \\
-\textbf{Tier 4: Runtime Relational Oracle} & DuckDB Relational Fixture Execution & 28 / 45 & \textbf{62.2\%} & 2.25 ms & 4.65 ms & $\approx$\$0.01 / scan \\
+\textbf{Tier 4: Runtime Relational Oracle} & DuckDB Relational Fixture Execution & 37 / 45 & \textbf{82.2\%} & 2.25 ms & 4.65 ms & $\approx$\$0.01 / scan \\
 \bottomrule
 \end{tabular}
 }
-\caption{Empirical evaluation across the 4-Tier Baseline Ladder on the 14-metric contract benchmark corpus (45 valid injected defects across 14 data/metric models). Purely syntactic parsers (Tier 0) are completely blind to relational logic shifts ($100\%$ false green rate). Standard structural checks (Tier 1) and single-domain sourced dbt suites (Tier 2) catch under $10\%$ of semantic defects because mutated queries remain structurally valid. In contrast, Static SCOS AST Linting (Tier 3) catches $62.2\%$ of defects in sub-millisecond pre-flight time ($0.74$ ms $P_{50}$) with zero database execution costs, matching the detection efficacy of runtime relational execution (Tier 4).}
+\caption{Empirical evaluation across the 4-Tier Baseline Ladder on the 14-metric contract benchmark corpus (45 valid injected defects across 14 data/metric models). Purely syntactic parsers (Tier 0) are completely blind to relational logic shifts ($100\%$ false green rate). Standard structural checks (Tier 1) and single-domain sourced dbt suites (Tier 2) catch under $10\%$ of semantic defects because mutated queries remain structurally valid. In contrast, Static SCOS AST Linting (Tier 3) catches $62.2\%$ of defects in sub-millisecond pre-flight time ($0.74$ ms $P_{50}$) with zero database execution costs. The fixture-backed runtime relational oracle (Tier 4) catches 82.2\%, a 20.0 percentage point improvement over static linting alone, reflecting defect classes that require executing the query against representative data rather than inspecting its syntax tree.}
 \label{tab:baseline_ladder_results}
 \end{table}
 
